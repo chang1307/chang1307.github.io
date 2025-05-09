@@ -1,10 +1,205 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
-  <title>測試頁面</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>慢性處方箋領藥時間計算器</title>
+  
+  <!-- React和相關依賴 -->
+  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  
+  <style>
+    body {
+      font-family: 'Microsoft JhengHei', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    button {
+      display: block;
+      width: 200px;
+      margin: 20px auto;
+      padding: 10px;
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .results {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+    
+    .info-section {
+      margin-top: 30px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello World!</h1>
-  <p>如果你能看到這個頁面，GitHub Pages 已正確設置。</p>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    function App() {
+      const [firstVisitDate, setFirstVisitDate] = React.useState('');
+      const [prescriptionDays, setPrescriptionDays] = React.useState('28');
+      const [refillTimes, setRefillTimes] = React.useState('3');
+      const [results, setResults] = React.useState(null);
+      
+      // 設置今天的日期
+      React.useEffect(() => {
+        const date = new Date();
+        const formattedDate = date.toISOString().split('T')[0];
+        setFirstVisitDate(formattedDate);
+      }, []);
+      
+      // 格式化日期顯示
+      const formatDateForDisplay = (date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+      };
+      
+      // 計算領藥日期和回診日期
+      const calculateDates = () => {
+        if (!firstVisitDate) {
+          alert('請填寫看診日期');
+          return;
+        }
+        
+        const days = parseInt(prescriptionDays);
+        const times = parseInt(refillTimes);
+        
+        // 計算標準領藥日期
+        const firstDate = new Date(firstVisitDate);
+        
+        // 計算最早第二次領藥日期（剩餘藥品不足10天時）
+        const earliestSecondRefill = new Date(firstDate);
+        earliestSecondRefill.setDate(firstDate.getDate() + days - 10);
+        
+        // 計算標準第二次領藥日期
+        const standardSecondRefill = new Date(firstDate);
+        standardSecondRefill.setDate(firstDate.getDate() + days);
+        
+        // 計算90天處方有效期結束日期
+        const validityEndDate = new Date(firstDate);
+        validityEndDate.setDate(firstDate.getDate() + 90);
+        
+        // 儲存結果
+        setResults({
+          firstVisitDate: firstDate,
+          earliestSecondRefill: earliestSecondRefill,
+          standardSecondRefill: standardSecondRefill,
+          validityEndDate: validityEndDate
+        });
+      };
+      
+      return (
+        <div className="container">
+          <h1>慢性處方箋領藥時間計算器</h1>
+          
+          <div className="form-section">
+            <div className="form-group">
+              <label>看診日期 (第一次領藥日期)</label>
+              <input 
+                type="date" 
+                value={firstVisitDate}
+                onChange={(e) => setFirstVisitDate(e.target.value)}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>慢性處方箋天數</label>
+              <select 
+                value={prescriptionDays}
+                onChange={(e) => setPrescriptionDays(e.target.value)}
+              >
+                <option value="21">21天</option>
+                <option value="28">28天</option>
+                <option value="30">30天</option>
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label>本慢箋可領藥次數</label>
+              <select 
+                value={refillTimes}
+                onChange={(e) => setRefillTimes(e.target.value)}
+              >
+                <option value="2">2次</option>
+                <option value="3">3次</option>
+                <option value="4">4次</option>
+              </select>
+            </div>
+            
+            <button onClick={calculateDates}>計算領藥與回診時間</button>
+          </div>
+          
+          {results && (
+            <div className="results">
+              <h2>計算結果</h2>
+              <p><strong>首次領藥日期：</strong> {formatDateForDisplay(results.firstVisitDate)}</p>
+              <p><strong>處方有效期限：</strong> {formatDateForDisplay(results.validityEndDate)} (首次領藥後90天)</p>
+              <p><strong>最早可第二次領藥日期：</strong> {formatDateForDisplay(results.earliestSecondRefill)} (藥品剩餘&lt;10天時)</p>
+              <p><strong>標準第二次領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} (藥品用完時)</p>
+            </div>
+          )}
+          
+          <div className="info-section">
+            <h3>說明</h3>
+            <p>根據台灣健保制度，慢性病連續處方箋規定：</p>
+            <ul>
+              <li>慢性處方箋有效期限為首次領藥日起90天內</li>
+              <li>一般處方天數為21天、28天或30天</li>
+              <li>可領藥次數通常為2至4次</li>
+              <li>最早可於藥品剩餘&lt;10天時提前領藥</li>
+            </ul>
+          </div>
+        </div>
+      );
+    }
+    
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
 </body>
 </html>
