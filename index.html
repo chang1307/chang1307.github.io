@@ -80,6 +80,11 @@
       background-color: #f8f9fa;
       border-radius: 5px;
     }
+    
+    .highlight {
+      color: #e53e3e;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -87,7 +92,7 @@
   
   <script type="text/babel">
     function App() {
-      // 基本状态
+      // 基本狀態
       const [firstVisitDate, setFirstVisitDate] = React.useState('');
       const [firstVisitYear, setFirstVisitYear] = React.useState('');
       const [firstVisitMonth, setFirstVisitMonth] = React.useState('');
@@ -200,53 +205,48 @@
         const standardSecondRefill = new Date(firstDate);
         standardSecondRefill.setDate(firstDate.getDate() + days);
         
-        // 實際第二次領藥日期（如果提供）
-        const actualSecond = actualSecondRefillDate ? new Date(actualSecondRefillDate) : null;
-        
-        // 計算後續領藥日期 - 第三次、第四次（如果適用）
-        // 如果有實際第二次領藥日期，則從該日期開始計算後續日期
-        // 否則使用標準第二次領藥日期
-        const baseDate = actualSecond || standardSecondRefill;
-        
-        // 第三次領藥日期計算 (如果 times 大於等於 3)
-        let standardThirdRefill = null;
-        let earliestThirdRefill = null;
-        
-        if (times >= 3) {
-          standardThirdRefill = new Date(baseDate);
-          standardThirdRefill.setDate(baseDate.getDate() + days);
-          
-          earliestThirdRefill = new Date(baseDate);
-          earliestThirdRefill.setDate(baseDate.getDate() + days - 10);
+        // 讀取實際第二次領藥日期（如果有的話）
+        let refillBaseDate = standardSecondRefill;
+        if (actualSecondRefillDate) {
+          refillBaseDate = new Date(actualSecondRefillDate);
         }
         
-        // 第四次領藥日期計算 (如果 times 等於 4)
-        let standardFourthRefill = null;
-        let earliestFourthRefill = null;
+        // 計算第三次領藥日期（如適用）
+        const earliestThirdRefill = new Date(refillBaseDate);
+        earliestThirdRefill.setDate(refillBaseDate.getDate() + days - 10);
         
-        if (times >= 4 && standardThirdRefill) {
-          standardFourthRefill = new Date(standardThirdRefill);
-          standardFourthRefill.setDate(standardThirdRefill.getDate() + days);
-          
-          earliestFourthRefill = new Date(standardThirdRefill);
-          earliestFourthRefill.setDate(standardThirdRefill.getDate() + days - 10);
-        }
+        const standardThirdRefill = new Date(refillBaseDate);
+        standardThirdRefill.setDate(refillBaseDate.getDate() + days);
+        
+        // 計算第四次領藥日期（如適用）
+        const earliestFourthRefill = new Date(standardThirdRefill);
+        earliestFourthRefill.setDate(standardThirdRefill.getDate() + days - 10);
+        
+        const standardFourthRefill = new Date(standardThirdRefill);
+        standardFourthRefill.setDate(standardThirdRefill.getDate() + days);
         
         // 計算90天處方有效期結束日期
         const validityEndDate = new Date(firstDate);
         validityEndDate.setDate(firstDate.getDate() + 90);
+        
+        // 計算回診日期（最後一次領藥日期後的處方天數）
+        const nextVisitDate = new Date(times === 2 ? standardSecondRefill : 
+                                      times === 3 ? standardThirdRefill : 
+                                      standardFourthRefill);
+        nextVisitDate.setDate(nextVisitDate.getDate() + days);
         
         // 儲存結果
         setResults({
           firstVisitDate: firstDate,
           earliestSecondRefill: earliestSecondRefill,
           standardSecondRefill: standardSecondRefill,
-          actualSecondRefill: actualSecond,
+          actualSecondRefill: actualSecondRefillDate ? new Date(actualSecondRefillDate) : null,
           earliestThirdRefill: earliestThirdRefill,
           standardThirdRefill: standardThirdRefill,
-          earliestFourthRefill: earliestFourthRefill,
-          standardFourthRefill: standardFourthRefill,
+          earliestFourthRefill: times >= 4 ? earliestFourthRefill : null,
+          standardFourthRefill: times >= 4 ? standardFourthRefill : null,
           validityEndDate: validityEndDate,
+          nextVisitDate: nextVisitDate,
           refillTimes: times
         });
       };
@@ -381,28 +381,33 @@
             <div className="results">
               <h2>計算結果</h2>
               <p><strong>首次領藥日期：</strong> {formatDateForDisplay(results.firstVisitDate)}</p>
-              <p><strong>處方有效期限：</strong> {formatDateForDisplay(results.validityEndDate)} (首次領藥後90天)</p>
-              <p><strong>最早可第二次領藥日期：</strong> {formatDateForDisplay(results.earliestSecondRefill)} (藥品剩餘&lt;10天時)</p>
-              <p><strong>標準第二次領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} (藥品用完時)</p>
+              <p><strong>處方有效期限：</strong> {formatDateForDisplay(results.validityEndDate)} <span className="highlight">(首次領藥後90天)</span></p>
+              
+              <h3>第二次領藥</h3>
+              <p><strong>最早可第二次領藥日期：</strong> {formatDateForDisplay(results.earliestSecondRefill)} <span className="highlight">(藥品剩餘&lt;10天時)</span></p>
+              <p><strong>標準第二次領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} <span className="highlight">(藥品用完時)</span></p>
               {results.actualSecondRefill && (
                 <p><strong>實際第二次領藥日期：</strong> {formatDateForDisplay(results.actualSecondRefill)}</p>
               )}
               
-              {/* 顯示第三次領藥日期 (如果適用) */}
-              {results.standardThirdRefill && (
+              {results.refillTimes >= 3 && (
                 <>
-                  <p><strong>最早可第三次領藥日期：</strong> {formatDateForDisplay(results.earliestThirdRefill)} (藥品剩餘&lt;10天時)</p>
-                  <p><strong>標準第三次領藥日期：</strong> {formatDateForDisplay(results.standardThirdRefill)} (藥品用完時)</p>
+                  <h3>第三次領藥</h3>
+                  <p><strong>最早可第三次領藥日期：</strong> {formatDateForDisplay(results.earliestThirdRefill)} <span className="highlight">(藥品剩餘&lt;10天時)</span></p>
+                  <p><strong>標準第三次領藥日期：</strong> {formatDateForDisplay(results.standardThirdRefill)} <span className="highlight">(藥品用完時)</span></p>
                 </>
               )}
               
-              {/* 顯示第四次領藥日期 (如果適用) */}
-              {results.standardFourthRefill && (
+              {results.refillTimes >= 4 && (
                 <>
-                  <p><strong>最早可第四次領藥日期：</strong> {formatDateForDisplay(results.earliestFourthRefill)} (藥品剩餘&lt;10天時)</p>
-                  <p><strong>標準第四次領藥日期：</strong> {formatDateForDisplay(results.standardFourthRefill)} (藥品用完時)</p>
+                  <h3>第四次領藥</h3>
+                  <p><strong>最早可第四次領藥日期：</strong> {formatDateForDisplay(results.earliestFourthRefill)} <span className="highlight">(藥品剩餘&lt;10天時)</span></p>
+                  <p><strong>標準第四次領藥日期：</strong> {formatDateForDisplay(results.standardFourthRefill)} <span className="highlight">(藥品用完時)</span></p>
                 </>
               )}
+              
+              <h3>回診時間</h3>
+              <p><strong>應回診日期：</strong> {formatDateForDisplay(results.nextVisitDate)} <span className="highlight">(最後一次領藥後的用藥天數)</span></p>
             </div>
           )}
           
@@ -415,6 +420,7 @@
               <li>可領藥次數通常為2至4次</li>
               <li>最早可於藥品剩餘&lt;10天時提前領藥</li>
               <li>如果延遲領藥，後續領藥時間會順延，但必須在90天有效期內完成所有領藥</li>
+              <li>過了90天有效期後，需回診取得新的處方箋</li>
             </ul>
           </div>
         </div>
