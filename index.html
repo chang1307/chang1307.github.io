@@ -80,18 +80,6 @@
       background-color: #f8f9fa;
       border-radius: 5px;
     }
-    
-    .refill-date {
-      padding: 8px;
-      margin: 5px 0;
-      border-left: 3px solid #4299e1;
-      background-color: #f0f7ff;
-    }
-    
-    .validity-warning {
-      color: #e53e3e;
-      font-weight: bold;
-    }
   </style>
 </head>
 <body>
@@ -121,8 +109,7 @@
       
       // 建立日期選項
       const getDaysInMonth = (year, month) => {
-        if (!year || !month) return 31;
-        return new Date(parseInt(year), parseInt(month), 0).getDate();
+        return new Date(year, month, 0).getDate();
       };
 
       // 根據選擇的年月計算可用的日期
@@ -153,16 +140,16 @@
       // 當年月日選擇變化時更新日期字串
       const updateFirstVisitDate = (year, month, day) => {
         if (year && month && day) {
-          const formattedMonth = month.toString().padStart(2, '0');
-          const formattedDay = day.toString().padStart(2, '0');
+          const formattedMonth = month.padStart(2, '0');
+          const formattedDay = day.padStart(2, '0');
           setFirstVisitDate(`${year}-${formattedMonth}-${formattedDay}`);
         }
       };
       
       const updateActualSecondDate = (year, month, day) => {
         if (year && month && day) {
-          const formattedMonth = month.toString().padStart(2, '0');
-          const formattedDay = day.toString().padStart(2, '0');
+          const formattedMonth = month.padStart(2, '0');
+          const formattedDay = day.padStart(2, '0');
           setActualSecondRefillDate(`${year}-${formattedMonth}-${formattedDay}`);
         } else {
           setActualSecondRefillDate('');
@@ -188,14 +175,8 @@
       
       // 格式化日期顯示
       const formatDateForDisplay = (date) => {
-        if (!date) return '';
         const d = new Date(date);
         return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
-      };
-
-      // 判斷日期是否在有效期內
-      const isWithinValidity = (date, validityEndDate) => {
-        return date <= validityEndDate;
       };
       
       // 計算領藥日期和回診日期
@@ -227,18 +208,23 @@
         // 否則使用標準第二次領藥日期
         const baseDate = actualSecond || standardSecondRefill;
         
-        // 第三次領藥日期計算
-        const standardThirdRefill = new Date(baseDate);
-        standardThirdRefill.setDate(baseDate.getDate() + days);
+        // 第三次領藥日期計算 (如果 times 大於等於 3)
+        let standardThirdRefill = null;
+        let earliestThirdRefill = null;
         
-        const earliestThirdRefill = new Date(baseDate);
-        earliestThirdRefill.setDate(baseDate.getDate() + days - 10);
+        if (times >= 3) {
+          standardThirdRefill = new Date(baseDate);
+          standardThirdRefill.setDate(baseDate.getDate() + days);
+          
+          earliestThirdRefill = new Date(baseDate);
+          earliestThirdRefill.setDate(baseDate.getDate() + days - 10);
+        }
         
-        // 第四次領藥日期計算 (如果適用)
+        // 第四次領藥日期計算 (如果 times 等於 4)
         let standardFourthRefill = null;
         let earliestFourthRefill = null;
         
-        if (times >= 4) {
+        if (times >= 4 && standardThirdRefill) {
           standardFourthRefill = new Date(standardThirdRefill);
           standardFourthRefill.setDate(standardThirdRefill.getDate() + days);
           
@@ -396,39 +382,25 @@
               <h2>計算結果</h2>
               <p><strong>首次領藥日期：</strong> {formatDateForDisplay(results.firstVisitDate)}</p>
               <p><strong>處方有效期限：</strong> {formatDateForDisplay(results.validityEndDate)} (首次領藥後90天)</p>
+              <p><strong>最早可第二次領藥日期：</strong> {formatDateForDisplay(results.earliestSecondRefill)} (藥品剩餘&lt;10天時)</p>
+              <p><strong>標準第二次領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} (藥品用完時)</p>
+              {results.actualSecondRefill && (
+                <p><strong>實際第二次領藥日期：</strong> {formatDateForDisplay(results.actualSecondRefill)}</p>
+              )}
               
-              <h3>第二次領藥</h3>
-              <div className="refill-date">
-                <p><strong>最早可領藥日期：</strong> {formatDateForDisplay(results.earliestSecondRefill)} (藥品剩餘&lt;10天時)</p>
-                <p><strong>標準領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} (藥品用完時)</p>
-                {results.actualSecondRefill && (
-                  <p><strong>實際領藥日期：</strong> {formatDateForDisplay(results.actualSecondRefill)}</p>
-                )}
-              </div>
-              
-              {results.refillTimes >= 3 && (
+              {/* 顯示第三次領藥日期 (如果適用) */}
+              {results.standardThirdRefill && (
                 <>
-                  <h3>第三次領藥</h3>
-                  <div className="refill-date">
-                    <p><strong>最早可領藥日期：</strong> {formatDateForDisplay(results.earliestThirdRefill)} (藥品剩餘&lt;10天時)</p>
-                    <p><strong>標準領藥日期：</strong> {formatDateForDisplay(results.standardThirdRefill)} (藥品用完時)</p>
-                    {!isWithinValidity(results.standardThirdRefill, results.validityEndDate) && (
-                      <p className="validity-warning">注意：此日期超出處方有效期，必須提前領藥或重新回診</p>
-                    )}
-                  </div>
+                  <p><strong>最早可第三次領藥日期：</strong> {formatDateForDisplay(results.earliestThirdRefill)} (藥品剩餘&lt;10天時)</p>
+                  <p><strong>標準第三次領藥日期：</strong> {formatDateForDisplay(results.standardThirdRefill)} (藥品用完時)</p>
                 </>
               )}
               
-              {results.refillTimes >= 4 && results.standardFourthRefill && (
+              {/* 顯示第四次領藥日期 (如果適用) */}
+              {results.standardFourthRefill && (
                 <>
-                  <h3>第四次領藥</h3>
-                  <div className="refill-date">
-                    <p><strong>最早可領藥日期：</strong> {formatDateForDisplay(results.earliestFourthRefill)} (藥品剩餘&lt;10天時)</p>
-                    <p><strong>標準領藥日期：</strong> {formatDateForDisplay(results.standardFourthRefill)} (藥品用完時)</p>
-                    {!isWithinValidity(results.standardFourthRefill, results.validityEndDate) && (
-                      <p className="validity-warning">注意：此日期超出處方有效期，必須提前領藥或重新回診</p>
-                    )}
-                  </div>
+                  <p><strong>最早可第四次領藥日期：</strong> {formatDateForDisplay(results.earliestFourthRefill)} (藥品剩餘&lt;10天時)</p>
+                  <p><strong>標準第四次領藥日期：</strong> {formatDateForDisplay(results.standardFourthRefill)} (藥品用完時)</p>
                 </>
               )}
             </div>
