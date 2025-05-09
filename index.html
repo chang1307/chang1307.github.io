@@ -85,6 +85,12 @@
       color: #e53e3e;
       font-weight: bold;
     }
+    
+    h3 {
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px dashed #ccc;
+    }
   </style>
 </head>
 <body>
@@ -180,6 +186,7 @@
       
       // 格式化日期顯示
       const formatDateForDisplay = (date) => {
+        if (!date) return "未設定";
         const d = new Date(date);
         return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
       };
@@ -194,61 +201,73 @@
         const days = parseInt(prescriptionDays);
         const times = parseInt(refillTimes);
         
-        // 計算標準領藥日期
-        const firstDate = new Date(firstVisitDate);
-        
-        // 計算最早第二次領藥日期（剩餘藥品不足10天時）
-        const earliestSecondRefill = new Date(firstDate);
-        earliestSecondRefill.setDate(firstDate.getDate() + days - 10);
-        
-        // 計算標準第二次領藥日期
-        const standardSecondRefill = new Date(firstDate);
-        standardSecondRefill.setDate(firstDate.getDate() + days);
-        
-        // 讀取實際第二次領藥日期（如果有的話）
-        let refillBaseDate = standardSecondRefill;
-        if (actualSecondRefillDate) {
-          refillBaseDate = new Date(actualSecondRefillDate);
+        try {
+          // 計算標準領藥日期
+          const firstDate = new Date(firstVisitDate);
+          
+          // 計算最早第二次領藥日期（剩餘藥品不足10天時）
+          const earliestSecondRefill = new Date(firstDate);
+          earliestSecondRefill.setDate(firstDate.getDate() + days - 10);
+          
+          // 計算標準第二次領藥日期
+          const standardSecondRefill = new Date(firstDate);
+          standardSecondRefill.setDate(firstDate.getDate() + days);
+          
+          // 決定後續領藥的基準日期
+          let secondRefillDate = standardSecondRefill;
+          if (actualSecondRefillDate) {
+            secondRefillDate = new Date(actualSecondRefillDate);
+          }
+          
+          // 計算第三次領藥日期（如適用）
+          const earliestThirdRefill = new Date(secondRefillDate);
+          earliestThirdRefill.setDate(secondRefillDate.getDate() + days - 10);
+          
+          const standardThirdRefill = new Date(secondRefillDate);
+          standardThirdRefill.setDate(secondRefillDate.getDate() + days);
+          
+          // 計算第四次領藥日期（如適用）
+          const earliestFourthRefill = new Date(standardThirdRefill);
+          earliestFourthRefill.setDate(standardThirdRefill.getDate() + days - 10);
+          
+          const standardFourthRefill = new Date(standardThirdRefill);
+          standardFourthRefill.setDate(standardThirdRefill.getDate() + days);
+          
+          // 計算90天處方有效期結束日期
+          const validityEndDate = new Date(firstDate);
+          validityEndDate.setDate(firstDate.getDate() + 90);
+          
+          // 計算回診日期（最後一次領藥日期後的處方天數）
+          let lastRefillDate;
+          if (times === 2) {
+            lastRefillDate = standardSecondRefill;
+          } else if (times === 3) {
+            lastRefillDate = standardThirdRefill;
+          } else {
+            lastRefillDate = standardFourthRefill;
+          }
+          
+          const nextVisitDate = new Date(lastRefillDate);
+          nextVisitDate.setDate(lastRefillDate.getDate() + days);
+          
+          // 儲存結果
+          setResults({
+            firstVisitDate: firstDate,
+            earliestSecondRefill: earliestSecondRefill,
+            standardSecondRefill: standardSecondRefill,
+            actualSecondRefill: actualSecondRefillDate ? new Date(actualSecondRefillDate) : null,
+            earliestThirdRefill: earliestThirdRefill,
+            standardThirdRefill: standardThirdRefill,
+            earliestFourthRefill: times >= 4 ? earliestFourthRefill : null,
+            standardFourthRefill: times >= 4 ? standardFourthRefill : null,
+            validityEndDate: validityEndDate,
+            nextVisitDate: nextVisitDate,
+            refillTimes: times
+          });
+        } catch (error) {
+          console.error("計算日期時發生錯誤:", error);
+          alert("計算日期時發生錯誤，請檢查輸入資料。");
         }
-        
-        // 計算第三次領藥日期（如適用）
-        const earliestThirdRefill = new Date(refillBaseDate);
-        earliestThirdRefill.setDate(refillBaseDate.getDate() + days - 10);
-        
-        const standardThirdRefill = new Date(refillBaseDate);
-        standardThirdRefill.setDate(refillBaseDate.getDate() + days);
-        
-        // 計算第四次領藥日期（如適用）
-        const earliestFourthRefill = new Date(standardThirdRefill);
-        earliestFourthRefill.setDate(standardThirdRefill.getDate() + days - 10);
-        
-        const standardFourthRefill = new Date(standardThirdRefill);
-        standardFourthRefill.setDate(standardThirdRefill.getDate() + days);
-        
-        // 計算90天處方有效期結束日期
-        const validityEndDate = new Date(firstDate);
-        validityEndDate.setDate(firstDate.getDate() + 90);
-        
-        // 計算回診日期（最後一次領藥日期後的處方天數）
-        const nextVisitDate = new Date(times === 2 ? standardSecondRefill : 
-                                      times === 3 ? standardThirdRefill : 
-                                      standardFourthRefill);
-        nextVisitDate.setDate(nextVisitDate.getDate() + days);
-        
-        // 儲存結果
-        setResults({
-          firstVisitDate: firstDate,
-          earliestSecondRefill: earliestSecondRefill,
-          standardSecondRefill: standardSecondRefill,
-          actualSecondRefill: actualSecondRefillDate ? new Date(actualSecondRefillDate) : null,
-          earliestThirdRefill: earliestThirdRefill,
-          standardThirdRefill: standardThirdRefill,
-          earliestFourthRefill: times >= 4 ? earliestFourthRefill : null,
-          standardFourthRefill: times >= 4 ? standardFourthRefill : null,
-          validityEndDate: validityEndDate,
-          nextVisitDate: nextVisitDate,
-          refillTimes: times
-        });
       };
       
       return (
