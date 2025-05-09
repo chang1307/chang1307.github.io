@@ -11,38 +11,74 @@
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
   
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
     body {
       font-family: 'Microsoft JhengHei', Arial, sans-serif;
       line-height: 1.6;
       color: #333;
       background-color: #f5f5f5;
+      padding: 20px;
     }
     
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
     
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
     }
     
-    @keyframes slideDown {
-      from { 
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to { 
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .date-selects {
+      display: flex;
+      gap: 10px;
+    }
+    
+    button {
+      display: block;
+      width: 200px;
+      margin: 20px auto;
+      padding: 10px;
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .results {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+    
+    .info-section {
+      margin-top: 30px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -51,69 +87,15 @@
   
   <script type="text/babel">
     function App() {
-      // 狀態變數
+      // 基本状态
       const [firstVisitDate, setFirstVisitDate] = React.useState('');
       const [firstVisitYear, setFirstVisitYear] = React.useState('');
       const [firstVisitMonth, setFirstVisitMonth] = React.useState('');
       const [firstVisitDay, setFirstVisitDay] = React.useState('');
-      const [actualSecondRefillDate, setActualSecondRefillDate] = React.useState('');
-      const [actualSecondYear, setActualSecondYear] = React.useState('');
-      const [actualSecondMonth, setActualSecondMonth] = React.useState('');
-      const [actualSecondDay, setActualSecondDay] = React.useState('');
       const [prescriptionDays, setPrescriptionDays] = React.useState('28');
       const [refillTimes, setRefillTimes] = React.useState('3');
       const [results, setResults] = React.useState(null);
-      const [today, setToday] = React.useState('');
-      const [isCalculating, setIsCalculating] = React.useState(false);
-
-      // 應用程式樣式
-      const styles = {
-        app: {
-          minHeight: '100vh',
-          padding: '20px',
-        },
-        container: {
-          maxWidth: '800px',
-          margin: '0 auto',
-        },
-        title: {
-          fontSize: '24px',
-          textAlign: 'center',
-          marginBottom: '20px',
-          color: '#333',
-          fontWeight: 'bold',
-        },
-        card: {
-          background: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-          padding: '20px',
-          marginBottom: '20px',
-        },
-        formGroup: {
-          marginBottom: '10px',
-        },
-        label: {
-          display: 'block',
-          marginBottom: '5px',
-          fontWeight: '500',
-        },
-        required: {
-          color: '#e53e3e',
-        },
-        formControl: {
-          width: '100%',
-          padding: '10px',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          fontSize: '16px',
-        },
-        buttonContainer: {
-          marginTop: '20px',
-          textAlign: 'center',
-        }
-      };
-
+      
       // 建立年份選項
       const currentYear = new Date().getFullYear();
       const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
@@ -134,13 +116,11 @@
       };
       
       const firstVisitDays = getAvailableDays(firstVisitYear, firstVisitMonth);
-      const actualSecondDays = getAvailableDays(actualSecondYear, actualSecondMonth);
-
+      
       // 設置今天的日期
       React.useEffect(() => {
         const date = new Date();
         const formattedDate = date.toISOString().split('T')[0];
-        setToday(formattedDate);
         
         // 設置初始日期為今天
         const currentYear = date.getFullYear().toString();
@@ -162,581 +142,166 @@
         }
       };
       
-      const updateActualSecondDate = (year, month, day) => {
-        if (year && month && day) {
-          const formattedMonth = month.padStart(2, '0');
-          const formattedDay = day.padStart(2, '0');
-          setActualSecondRefillDate(`${year}-${formattedMonth}-${formattedDay}`);
-        } else {
-          setActualSecondRefillDate('');
-        }
-      };
-      
       // 當年月日選擇變化時更新日期
       React.useEffect(() => {
         updateFirstVisitDate(firstVisitYear, firstVisitMonth, firstVisitDay);
       }, [firstVisitYear, firstVisitMonth, firstVisitDay]);
       
-      React.useEffect(() => {
-        updateActualSecondDate(actualSecondYear, actualSecondMonth, actualSecondDay);
-      }, [actualSecondYear, actualSecondMonth, actualSecondDay]);
-      
-      // 處理處方天數變更，確保有效的領藥次數
-      React.useEffect(() => {
-        // 如果天數大於22天，且選擇了4次，則重置為3次
-        if (parseInt(prescriptionDays) > 22 && refillTimes === '4') {
-          setRefillTimes('3');
-        }
-      }, [prescriptionDays, refillTimes]);
-
       // 格式化日期顯示
       const formatDateForDisplay = (date) => {
         const d = new Date(date);
         return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
       };
-
+      
       // 計算領藥日期和回診日期
       const calculateDates = () => {
         if (!firstVisitDate) {
           alert('請填寫看診日期');
           return;
         }
-
-        // 顯示計算動畫
-        setIsCalculating(true);
         
-        // 先清空結果，讓用戶知道正在重新計算
-        setResults(null);
+        const days = parseInt(prescriptionDays);
+        const times = parseInt(refillTimes);
         
-        // 使用requestAnimationFrame來確保UI更新後再進行計算
-        requestAnimationFrame(() => {
-          const days = parseInt(prescriptionDays);
-          const times = parseInt(refillTimes);
-          
-          // 計算標準領藥日期
-          const firstDate = new Date(firstVisitDate);
-          
-          // 第一次領藥是在就診當天
-          const firstRefillDate = new Date(firstDate);
-          
-          // 計算最早第二次領藥日期（剩餘藥品不足10天時）
-          const earliestSecondRefill = new Date(firstDate);
-          earliestSecondRefill.setDate(firstDate.getDate() + days - 10);
-          
-          // 計算標準第二次領藥日期
-          const standardSecondRefill = new Date(firstDate);
-          standardSecondRefill.setDate(firstDate.getDate() + days);
-          
-          // 計算90天處方有效期結束日期
-          const validityEndDate = new Date(firstDate);
-          validityEndDate.setDate(firstDate.getDate() + 90);
-          
-          // 處理實際第二次領藥日期（如有）
-          let thirdRefillDate, earliestThirdRefill, isThirdRefillValid = true;
-          if (actualSecondRefillDate) {
-            // 如果用戶指定了實際第二次領藥日期
-            const actualDate = new Date(actualSecondRefillDate);
-            
-            // 根據實際第二次領藥計算最早第三次領藥
-            earliestThirdRefill = new Date(actualDate);
-            earliestThirdRefill.setDate(actualDate.getDate() + days - 10);
-            
-            // 計算標準第三次領藥日期
-            thirdRefillDate = new Date(actualDate);
-            thirdRefillDate.setDate(actualDate.getDate() + days);
-            
-            // 檢查第三次領藥是否超過處方有效期
-            if (thirdRefillDate > validityEndDate) {
-              isThirdRefillValid = false;
-            }
-          } else {
-            // 根據標準第二次領藥日期計算
-            earliestThirdRefill = new Date(standardSecondRefill);
-            earliestThirdRefill.setDate(standardSecondRefill.getDate() + days - 10);
-            
-            thirdRefillDate = new Date(standardSecondRefill);
-            thirdRefillDate.setDate(standardSecondRefill.getDate() + days);
-            
-            // 檢查第三次領藥是否超過處方有效期
-            if (thirdRefillDate > validityEndDate) {
-              isThirdRefillValid = false;
-            }
-          }
-          
-          // 如適用，計算第四次領藥日期
-          let fourthRefillDate, earliestFourthRefill, isFourthRefillValid = true;
-          if (times > 3) {
-            earliestFourthRefill = new Date(thirdRefillDate);
-            earliestFourthRefill.setDate(thirdRefillDate.getDate() + days - 10);
-            
-            fourthRefillDate = new Date(thirdRefillDate);
-            fourthRefillDate.setDate(thirdRefillDate.getDate() + days);
-            
-            // 檢查第四次領藥是否超過處方有效期
-            if (fourthRefillDate > validityEndDate || !isThirdRefillValid) {
-              isFourthRefillValid = false;
-            }
-          }
-          
-          // 根據最後一次有效領藥計算下次回診日期
-          let nextVisitDate, earliestNextVisit;
-          
-          // 計算最後一次處方用完的日期
-          const lastPrescriptionDate = times === 2 ? standardSecondRefill : 
-                                    times === 3 ? (isThirdRefillValid ? thirdRefillDate : (actualSecondRefillDate ? new Date(actualSecondRefillDate) : standardSecondRefill)) : 
-                                    (isFourthRefillValid ? fourthRefillDate : (isThirdRefillValid ? thirdRefillDate : (actualSecondRefillDate ? new Date(actualSecondRefillDate) : standardSecondRefill)));
-          
-          // 最早回診日期（藥品剩餘不足10天）
-          earliestNextVisit = new Date(lastPrescriptionDate);
-          earliestNextVisit.setDate(lastPrescriptionDate.getDate() + days - 10);
-          
-          // 標準回診日期（藥品用完時）
-          nextVisitDate = new Date(lastPrescriptionDate);
-          nextVisitDate.setDate(lastPrescriptionDate.getDate() + days);
-          
-          // 儲存結果
-          setResults({
-            firstVisitDate: firstDate,
-            earliestSecondRefill: earliestSecondRefill,
-            standardSecondRefill: standardSecondRefill,
-            actualSecondRefill: actualSecondRefillDate ? new Date(actualSecondRefillDate) : null,
-            earliestThirdRefill: earliestThirdRefill,
-            thirdRefillDate: thirdRefillDate,
-            isThirdRefillValid: isThirdRefillValid,
-            earliestFourthRefill: times > 3 ? earliestFourthRefill : null,
-            fourthRefillDate: times > 3 ? fourthRefillDate : null,
-            isFourthRefillValid: times > 3 ? isFourthRefillValid : false,
-            earliestNextVisit: earliestNextVisit,
-            nextVisitDate: nextVisitDate,
-            validityEndDate: validityEndDate,
-            calculatedAt: new Date().getTime() // 添加計算時間戳記，確保每次計算都有不同的結果對象
-          });
-          
-          // 隱藏計算動畫
-          setIsCalculating(false);
-          
-          // 計算完成後滾動到結果區域
-          const resultsElement = document.getElementById('results-section');
-          if (resultsElement) {
-            resultsElement.scrollIntoView({ behavior: 'smooth' });
-          }
+        // 計算標準領藥日期
+        const firstDate = new Date(firstVisitDate);
+        
+        // 計算最早第二次領藥日期（剩餘藥品不足10天時）
+        const earliestSecondRefill = new Date(firstDate);
+        earliestSecondRefill.setDate(firstDate.getDate() + days - 10);
+        
+        // 計算標準第二次領藥日期
+        const standardSecondRefill = new Date(firstDate);
+        standardSecondRefill.setDate(firstDate.getDate() + days);
+        
+        // 計算90天處方有效期結束日期
+        const validityEndDate = new Date(firstDate);
+        validityEndDate.setDate(firstDate.getDate() + 90);
+        
+        // 儲存結果
+        setResults({
+          firstVisitDate: firstDate,
+          earliestSecondRefill: earliestSecondRefill,
+          standardSecondRefill: standardSecondRefill,
+          validityEndDate: validityEndDate
         });
       };
-
+      
       return (
-        <div style={styles.app}>
-          <div style={styles.container}>
-            <h1 style={styles.title}>慢性處方箋領藥時間計算器</h1>
-            
-            <div style={styles.card}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr',
-                gap: '15px'
-              }}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    看診日期 (第一次領藥日期) <span style={styles.required}>*</span>
-                  </label>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <select 
-                      style={{ ...styles.formControl, flex: 1 }}
-                      value={firstVisitYear}
-                      onChange={(e) => setFirstVisitYear(e.target.value)}
-                    >
-                      <option value="">選擇年份</option>
-                      {years.map(year => (
-                        <option key={year} value={year}>{year}年</option>
-                      ))}
-                    </select>
-                    
-                    <select 
-                      style={{ ...styles.formControl, flex: 1 }}
-                      value={firstVisitMonth}
-                      onChange={(e) => {
-                        const newMonth = e.target.value;
-                        setFirstVisitMonth(newMonth);
-                        
-                        // 當選擇的月份變化時，檢查日期是否有效
-                        if (firstVisitDay) {
-                          const daysInNewMonth = getDaysInMonth(parseInt(firstVisitYear), parseInt(newMonth));
-                          if (parseInt(firstVisitDay) > daysInNewMonth) {
-                            setFirstVisitDay(daysInNewMonth.toString());
-                          }
-                        }
-                      }}
-                    >
-                      <option value="">選擇月份</option>
-                      {months.map(month => (
-                        <option key={month} value={month.toString().padStart(2, '0')}>{month}月</option>
-                      ))}
-                    </select>
-                    
-                    <select 
-                      style={{ ...styles.formControl, flex: 1 }}
-                      value={firstVisitDay}
-                      onChange={(e) => setFirstVisitDay(e.target.value)}
-                    >
-                      <option value="">選擇日期</option>
-                      {firstVisitDays.map(day => (
-                        <option key={day} value={day.toString().padStart(2, '0')}>{day}日</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    慢性處方箋天數 <span style={styles.required}>*</span>
-                  </label>
-                  <select
-                    style={styles.formControl}
-                    value={prescriptionDays}
-                    onChange={(e) => setPrescriptionDays(e.target.value)}
-                  >
-                    {Array.from({ length: 10 }, (_, i) => i + 21).map(day => (
-                      <option key={day} value={day.toString()}>{day}天</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    本慢箋可領藥次數 <span style={styles.required}>*</span>
-                  </label>
-                  <select
-                    style={styles.formControl}
-                    value={refillTimes}
-                    onChange={(e) => setRefillTimes(e.target.value)}
-                  >
-                    <option value="2">2次</option>
-                    <option value="3">3次</option>
-                    {parseInt(prescriptionDays) <= 22 && <option value="4">4次</option>}
-                  </select>
-                </div>
-                
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>
-                    實際第二次領藥日期 (選填，若已過第二次領藥)
-                  </label>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <select 
-                      style={{ ...styles.formControl, flex: 1 }}
-                      value={actualSecondYear}
-                      onChange={(e) => setActualSecondYear(e.target.value)}
-                    >
-                      <option value="">選擇年份</option>
-                      {years.map(year => (
-                        <option key={year} value={year}>{year}年</option>
-                      ))}
-                    </select>
-                    
-                    <select 
-                      style={{ ...styles.formControl, flex: 1 }}
-                      value={actualSecondMonth}
-                      onChange={(e) => {
-                        const newMonth = e.target.value;
-                        setActualSecondMonth(newMonth);
-                        
-                        // 當選擇的月份變化時，檢查日期是否有效
-                        if (actualSecondDay) {
-                          const daysInNewMonth = getDaysInMonth(parseInt(actualSecondYear), parseInt(newMonth));
-                          if (parseInt(actualSecondDay) > daysInNewMonth) {
-                            setActualSecondDay(daysInNewMonth.toString());
-                          }
-                        }
-                      }}
-                      disabled={!actualSecondYear}
-                    >
-                      <option value="">選擇月份</option>
-                      {months.map(month => (
-                        <option key={month} value={month.toString().padStart(2, '0')}>{month}月</option>
-                      ))}
-                    </select>
-                    
-                    <select 
-                      style={{ ...styles.formControl, flex: 1 }}
-                      value={actualSecondDay}
-                      onChange={(e) => setActualSecondDay(e.target.value)}
-                      disabled={!actualSecondMonth}
-                    >
-                      <option value="">選擇日期</option>
-                      {actualSecondDays.map(day => (
-                        <option key={day} value={day.toString().padStart(2, '0')}>{day}日</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-              
-              <div style={styles.buttonContainer}>
-                <button
-                  style={{
-                    backgroundColor: '#4299e1',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '10px 20px',
-                    fontSize: '16px',
-                    cursor: isCalculating ? 'wait' : 'pointer',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    minWidth: '180px',
-                    opacity: isCalculating ? 0.8 : 1,
-                    margin: '0 auto'
-                  }}
-                  onClick={calculateDates}
-                  disabled={isCalculating}
+        <div className="container">
+          <h1>慢性處方箋領藥時間計算器</h1>
+          
+          <div className="form-section">
+            <div className="form-group">
+              <label>看診日期 (第一次領藥日期)</label>
+              <div className="date-selects">
+                <select 
+                  value={firstVisitYear}
+                  onChange={(e) => setFirstVisitYear(e.target.value)}
                 >
-                  {isCalculating ? (
-                    <>
-                      <div style={{
-                        width: '20px',
-                        height: '20px',
-                        border: '3px solid rgba(255,255,255,0.3)',
-                        borderRadius: '50%',
-                        borderTopColor: 'white',
-                        animation: 'spin 1s linear infinite',
-                        marginRight: '10px',
-                      }}></div>
-                      計算中...
-                    </>
-                  ) : (
-                    '計算領藥與回診時間'
-                  )}
-                </button>
-              </div>
-            </div>
-            
-            {results && (
-              <div id="results-section" style={{...styles.card, marginTop: '30px', animation: 'fadeIn 0.5s ease-in'}}>
-                <h2 style={{
-                  fontSize: '20px',
-                  marginBottom: '15px',
-                  borderBottom: '1px solid #eee',
-                  paddingBottom: '10px',
-                }}>計算結果</h2>
+                  <option value="">選擇年份</option>
+                  {years.map(year => (
+                    <option key={year} value={year}>{year}年</option>
+                  ))}
+                </select>
                 
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '20px',
-                }}>
-                  <div style={{
-                    paddingBottom: '15px',
-                    borderBottom: '1px solid #eee',
-                    animation: 'slideDown 0.3s ease-out',
-                  }}>
-                    <h3 style={{
-                      fontSize: '18px',
-                      marginBottom: '10px',
-                      color: '#4a5568',
-                    }}>處方資訊</h3>
-                    <p><span style={{fontWeight: '600'}}>首次領藥日期：</span> {formatDateForDisplay(results.firstVisitDate)}</p>
-                    <p><span style={{fontWeight: '600'}}>處方有效期限：</span> {formatDateForDisplay(results.validityEndDate)} (首次領藥後90天)</p>
-                  </div>
-                  
-                  <div style={{
-                    paddingBottom: '15px',
-                    borderBottom: '1px solid #eee',
-                    animation: 'slideDown 0.3s ease-out 0.1s',
-                    animationFillMode: 'both',
-                  }}>
-                    <h3 style={{
-                      fontSize: '18px',
-                      marginBottom: '10px',
-                      color: '#4a5568',
-                    }}>第二次領藥</h3>
-                    <p>
-                      <span style={{fontWeight: '600'}}>最早可領藥日期：</span> 
-                      <span style={{color: '#3182ce', fontWeight: '600'}}>{formatDateForDisplay(results.earliestSecondRefill)}</span> 
-                      (藥品剩餘&lt;10天時)
-                    </p>
-                    <p>
-                      <span style={{fontWeight: '600'}}>標準領藥日期：</span> 
-                      {formatDateForDisplay(results.standardSecondRefill)} 
-                      (藥品用完時)
-                    </p>
-                    {results.actualSecondRefill && (
-                      <p>
-                        <span style={{fontWeight: '600'}}>實際領藥日期：</span> 
-                        {formatDateForDisplay(results.actualSecondRefill)}
-                      </p>
-                    )}
-                  </div>
-                  
-                  {parseInt(refillTimes) >= 3 && (
-                    <div style={{
-                      paddingBottom: '15px',
-                      borderBottom: '1px solid #eee',
-                      animation: 'slideDown 0.3s ease-out 0.2s',
-                      animationFillMode: 'both',
-                    }}>
-                      <h3 style={{
-                        fontSize: '18px',
-                        marginBottom: '10px',
-                        color: '#4a5568',
-                      }}>第三次領藥</h3>
-                      {results.isThirdRefillValid ? (
-                        <>
-                          <p>
-                            <span style={{fontWeight: '600'}}>最早可領藥日期：</span> 
-                            <span style={{color: '#3182ce', fontWeight: '600'}}>{formatDateForDisplay(results.earliestThirdRefill)}</span> 
-                            (藥品剩餘&lt;10天時)
-                          </p>
-                          <p>
-                            <span style={{fontWeight: '600'}}>標準領藥日期：</span> 
-                            {formatDateForDisplay(results.thirdRefillDate)} 
-                            (藥品用完時)
-                          </p>
-                        </>
-                      ) : (
-                        <p style={{color: '#e53e3e', fontWeight: '500'}}>
-                          此次領藥時間已超過處方箋有效期限（{formatDateForDisplay(results.validityEndDate)}），無法領藥。請重新回診開立處方。
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {parseInt(refillTimes) >= 4 && results.earliestFourthRefill && (
-                    <div style={{
-                      paddingBottom: '15px',
-                      borderBottom: '1px solid #eee',
-                      animation: 'slideDown 0.3s ease-out 0.3s',
-                      animationFillMode: 'both',
-                    }}>
-                      <h3 style={{
-                        fontSize: '18px',
-                        marginBottom: '10px',
-                        color: '#4a5568',
-                      }}>第四次領藥</h3>
-                      {results.isFourthRefillValid ? (
-                        <>
-                          <p>
-                            <span style={{fontWeight: '600'}}>最早可領藥日期：</span> 
-                            <span style={{color: '#3182ce', fontWeight: '600'}}>{formatDateForDisplay(results.earliestFourthRefill)}</span> 
-                            (藥品剩餘&lt;10天時)
-                          </p>
-                          <p>
-                            <span style={{fontWeight: '600'}}>標準領藥日期：</span> 
-                            {formatDateForDisplay(results.fourthRefillDate)} 
-                            (藥品用完時)
-                          </p>
-                        </>
-                      ) : (
-                        <p style={{color: '#e53e3e', fontWeight: '500'}}>
-                          此次領藥時間已超過處方箋有效期限（{formatDateForDisplay(results.validityEndDate)}），無法領藥。請重新回診開立處方。
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div style={{
-                    paddingBottom: '15px',
-                    animation: 'slideDown 0.3s ease-out 0.4s',
-                    animationFillMode: 'both',
-                  }}>
-                    <h3 style={{
-                      fontSize: '18px',
-                      marginBottom: '10px',
-                      color: '#4a5568',
-                    }}>下次回診時間</h3>
-                    <p>
-                      <span style={{fontWeight: '600'}}>最早可回診日期：</span> 
-                      <span style={{color: '#38a169', fontWeight: '600'}}>{formatDateForDisplay(results.earliestNextVisit)}</span> 
-                      (藥品剩餘&lt;10天時)
-                    </p>
-                    <p>
-                      <span style={{fontWeight: '600'}}>標準回診日期：</span> 
-                      {formatDateForDisplay(results.nextVisitDate)} 
-                      (藥品用完時)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div style={styles.card}>
-              <h2 style={{
-                fontSize: '20px',
-                marginBottom: '15px',
-              }}>說明 (Instructions)</h2>
-              <div>
-                <p style={{marginBottom: '10px'}}>根據台灣健保制度，慢性病連續處方箋規定：</p>
-                <ul style={{marginLeft: '25px', marginBottom: '15px'}}>
-                  <li style={{marginBottom: '5px'}}>慢性處方箋有效期限為首次領藥日起90天內</li>
-                  <li style={{marginBottom: '5px'}}>一般處方天數為21~30天</li>
-                  <li style={{marginBottom: '5px'}}>可領藥次數通常為2至4次</li>
-                  <li style={{marginBottom: '5px'}}>最早可於藥品剩餘&lt;10天時提前領藥</li>
-                  <li style={{marginBottom: '5px'}}>如果延遲領藥，後續領藥時間會順延，但必須在90天有效期內完成所有領藥</li>
-                </ul>
-                <p style={{marginBottom: '10px'}}><strong>使用方法：</strong></p>
-                <ol style={{marginLeft: '25px', marginBottom: '15px'}}>
-                  <li style={{marginBottom: '5px'}}>輸入首次看診/領藥日期</li>
-                  <li style={{marginBottom: '5px'}}>選擇慢性處方箋天數 (21~30天)</li>
-                  <li style={{marginBottom: '5px'}}>選擇可領藥次數 (2/3/4次)</li>
-                  <li style={{marginBottom: '5px'}}>若已過第二次領藥，可選填實際第二次領藥日期，系統會據此調整後續日期</li>
-                  <li style={{marginBottom: '5px'}}>點擊計算按鈕即可獲得領藥和回診時間</li>
-                </ol>
-                <p style={{marginBottom: '10px'}}><strong>注意：</strong> 此計算器僅供參考，實際領藥時間可能受醫院或藥局營業時間、假日等因素影響。請依照醫囑按時服藥並適時回診。</p>
+                <select 
+                  value={firstVisitMonth}
+                  onChange={(e) => {
+                    const newMonth = e.target.value;
+                    setFirstVisitMonth(newMonth);
+                    
+                    // 當選擇的月份變化時，檢查日期是否有效
+                    if (firstVisitDay) {
+                      const daysInNewMonth = getDaysInMonth(parseInt(firstVisitYear), parseInt(newMonth));
+                      if (parseInt(firstVisitDay) > daysInNewMonth) {
+                        setFirstVisitDay(daysInNewMonth.toString());
+                      }
+                    }
+                  }}
+                >
+                  <option value="">選擇月份</option>
+                  {months.map(month => (
+                    <option key={month} value={month.toString().padStart(2, '0')}>{month}月</option>
+                  ))}
+                </select>
+                
+                <select 
+                  value={firstVisitDay}
+                  onChange={(e) => setFirstVisitDay(e.target.value)}
+                >
+                  <option value="">選擇日期</option>
+                  {firstVisitDays.map(day => (
+                    <option key={day} value={day.toString().padStart(2, '0')}>{day}日</option>
+                  ))}
+                </select>
               </div>
             </div>
+            
+            <div className="form-group">
+              <label>慢性處方箋天數</label>
+              <select 
+                value={prescriptionDays}
+                onChange={(e) => setPrescriptionDays(e.target.value)}
+              >
+                {Array.from({ length: 10 }, (_, i) => i + 21).map(day => (
+                  <option key={day} value={day.toString()}>{day}天</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label>本慢箋可領藥次數</label>
+              <select 
+                value={refillTimes}
+                onChange={(e) => setRefillTimes(e.target.value)}
+              >
+                <option value="2">2次</option>
+                <option value="3">3次</option>
+                {parseInt(prescriptionDays) <= 22 && <option value="4">4次</option>}
+              </select>
+            </div>
+            
+            <button onClick={calculateDates}>計算領藥與回診時間</button>
+          </div>
+          
+          {results && (
+            <div className="results">
+              <h2>計算結果</h2>
+              <p><strong>首次領藥日期：</strong> {formatDateForDisplay(results.firstVisitDate)}</p>
+              <p><strong>處方有效期限：</strong> {formatDateForDisplay(results.validityEndDate)} (首次領藥後90天)</p>
+              <p><strong>最早可第二次領藥日期：</strong> {formatDateForDisplay(results.earliestSecondRefill)} (藥品剩餘&lt;10天時)</p>
+              <p><strong>標準第二次領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} (藥品用完時)</p>
+            </div>
+          )}
+          
+          <div className="info-section">
+            <h3>說明</h3>
+            <p>根據台灣健保制度，慢性病連續處方箋規定：</p>
+            <ul>
+              <li>慢性處方箋有效期限為首次領藥日起90天內</li>
+              <li>一般處方天數為21~30天</li>
+              <li>可領藥次數通常為2至4次（21-22天處方可領4次，其他最多3次）</li>
+              <li>最早可於藥品剩餘&lt;10天時提前領藥</li>
+              <li>如果延遲領藥，後續領藥時間會順延，但必須在90天有效期內完成所有領藥</li>
+            </ul>
           </div>
         </div>
       );
     }
-    
-    // 處理錯誤
-    window.onerror = function(message, source, lineno, colno, error) {
-      console.error("Error caught:", message, error);
+
+    // 錯誤處理
+    try {
+      ReactDOM.render(<App />, document.getElementById('root'));
+    } catch (error) {
       document.getElementById('root').innerHTML = `
-        <div style="color: red; padding: 20px; border: 1px solid red; margin: 20px; font-family: Arial, sans-serif;">
-          <h2>發生錯誤</h2>
-          <p>${message}</p>
-          <p>在 ${source} 第 ${lineno} 行，第 ${colno} 列</p>
-          <p>${error ? error.stack : '無堆疊跟踪'}</p>
-          <p>請嘗試重新整理頁面或聯繫網站管理員。</p>
+        <div style="color: red; padding: 20px; border: 1px solid red; margin: 20px;">
+          <h2>錯誤</h2>
+          <p>${error.message}</p>
         </div>
       `;
-      return true;
-    };
-
-    // 捕獲 React 錯誤
-    class ErrorBoundary extends React.Component {
-      constructor(props) {
-        super(props);
-        this.state = { hasError: false, error: null };
-      }
-
-      static getDerivedStateFromError(error) {
-        return { hasError: true, error };
-      }
-
-      render() {
-        if (this.state.hasError) {
-          return (
-            <div style={{ color: 'red', padding: '20px', border: '1px solid red', margin: '20px' }}>
-              <h2>React 元件錯誤</h2>
-              <p>{this.state.error && this.state.error.toString()}</p>
-              <p>請嘗試重新整理頁面或聯繫網站管理員。</p>
-            </div>
-          );
-        }
-
-        return this.props.children;
-      }
+      console.error(error);
     }
-
-    // 渲染應用，包裹在錯誤邊界中
-    ReactDOM.render(
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>,
-      document.getElementById('root')
-    );
   </script>
 </body>
 </html>
