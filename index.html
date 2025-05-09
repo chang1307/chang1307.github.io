@@ -80,6 +80,23 @@
       background-color: #f8f9fa;
       border-radius: 5px;
     }
+    
+    .highlight {
+      color: #3182ce;
+      font-weight: bold;
+    }
+    
+    .grid-form {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+    
+    @media (min-width: 768px) {
+      .grid-form {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -92,9 +109,14 @@
       const [firstVisitYear, setFirstVisitYear] = React.useState('');
       const [firstVisitMonth, setFirstVisitMonth] = React.useState('');
       const [firstVisitDay, setFirstVisitDay] = React.useState('');
+      const [actualSecondRefillDate, setActualSecondRefillDate] = React.useState('');
+      const [actualSecondYear, setActualSecondYear] = React.useState('');
+      const [actualSecondMonth, setActualSecondMonth] = React.useState('');
+      const [actualSecondDay, setActualSecondDay] = React.useState('');
       const [prescriptionDays, setPrescriptionDays] = React.useState('28');
       const [refillTimes, setRefillTimes] = React.useState('3');
       const [results, setResults] = React.useState(null);
+      const [isCalculating, setIsCalculating] = React.useState(false);
       
       // 建立年份選項
       const currentYear = new Date().getFullYear();
@@ -116,11 +138,11 @@
       };
       
       const firstVisitDays = getAvailableDays(firstVisitYear, firstVisitMonth);
+      const actualSecondDays = getAvailableDays(actualSecondYear, actualSecondMonth);
       
       // 設置今天的日期
       React.useEffect(() => {
         const date = new Date();
-        const formattedDate = date.toISOString().split('T')[0];
         
         // 設置初始日期為今天
         const currentYear = date.getFullYear().toString();
@@ -142,10 +164,32 @@
         }
       };
       
+      const updateActualSecondDate = (year, month, day) => {
+        if (year && month && day) {
+          const formattedMonth = month.padStart(2, '0');
+          const formattedDay = day.padStart(2, '0');
+          setActualSecondRefillDate(`${year}-${formattedMonth}-${formattedDay}`);
+        } else {
+          setActualSecondRefillDate('');
+        }
+      };
+      
       // 當年月日選擇變化時更新日期
       React.useEffect(() => {
         updateFirstVisitDate(firstVisitYear, firstVisitMonth, firstVisitDay);
       }, [firstVisitYear, firstVisitMonth, firstVisitDay]);
+      
+      React.useEffect(() => {
+        updateActualSecondDate(actualSecondYear, actualSecondMonth, actualSecondDay);
+      }, [actualSecondYear, actualSecondMonth, actualSecondDay]);
+      
+      // 處理處方天數變更，確保有效的領藥次數
+      React.useEffect(() => {
+        // 如果天數大於22天，且選擇了4次，則重置為3次
+        if (parseInt(prescriptionDays) > 22 && refillTimes === '4') {
+          setRefillTimes('3');
+        }
+      }, [prescriptionDays, refillTimes]);
       
       // 格式化日期顯示
       const formatDateForDisplay = (date) => {
@@ -160,31 +204,85 @@
           return;
         }
         
-        const days = parseInt(prescriptionDays);
-        const times = parseInt(refillTimes);
+        // 顯示計算動畫
+        setIsCalculating(true);
         
-        // 計算標準領藥日期
-        const firstDate = new Date(firstVisitDate);
+        // 先清空結果
+        setResults(null);
         
-        // 計算最早第二次領藥日期（剩餘藥品不足10天時）
-        const earliestSecondRefill = new Date(firstDate);
-        earliestSecondRefill.setDate(firstDate.getDate() + days - 10);
-        
-        // 計算標準第二次領藥日期
-        const standardSecondRefill = new Date(firstDate);
-        standardSecondRefill.setDate(firstDate.getDate() + days);
-        
-        // 計算90天處方有效期結束日期
-        const validityEndDate = new Date(firstDate);
-        validityEndDate.setDate(firstDate.getDate() + 90);
-        
-        // 儲存結果
-        setResults({
-          firstVisitDate: firstDate,
-          earliestSecondRefill: earliestSecondRefill,
-          standardSecondRefill: standardSecondRefill,
-          validityEndDate: validityEndDate
-        });
+        // 使用簡單的setTimeout模擬計算過程
+        setTimeout(() => {
+          const days = parseInt(prescriptionDays);
+          const times = parseInt(refillTimes);
+          
+          // 計算標準領藥日期
+          const firstDate = new Date(firstVisitDate);
+          
+          // 計算最早第二次領藥日期（剩餘藥品不足10天時）
+          const earliestSecondRefill = new Date(firstDate);
+          earliestSecondRefill.setDate(firstDate.getDate() + days - 10);
+          
+          // 計算標準第二次領藥日期
+          const standardSecondRefill = new Date(firstDate);
+          standardSecondRefill.setDate(firstDate.getDate() + days);
+          
+          // 計算90天處方有效期結束日期
+          const validityEndDate = new Date(firstDate);
+          validityEndDate.setDate(firstDate.getDate() + 90);
+          
+          // 處理實際第二次領藥日期（如有）
+          let thirdRefillDate, earliestThirdRefill, isThirdRefillValid = true;
+          if (actualSecondRefillDate) {
+            // 如果用戶指定了實際第二次領藥日期
+            const actualDate = new Date(actualSecondRefillDate);
+            
+            // 根據實際第二次領藥計算最早第三次領藥
+            earliestThirdRefill = new Date(actualDate);
+            earliestThirdRefill.setDate(actualDate.getDate() + days - 10);
+            
+            // 計算標準第三次領藥日期
+            thirdRefillDate = new Date(actualDate);
+            thirdRefillDate.setDate(actualDate.getDate() + days);
+            
+            // 檢查第三次領藥是否超過處方有效期
+            if (thirdRefillDate > validityEndDate) {
+              isThirdRefillValid = false;
+            }
+          } else {
+            // 根據標準第二次領藥日期計算
+            earliestThirdRefill = new Date(standardSecondRefill);
+            earliestThirdRefill.setDate(standardSecondRefill.getDate() + days - 10);
+            
+            thirdRefillDate = new Date(standardSecondRefill);
+            thirdRefillDate.setDate(standardSecondRefill.getDate() + days);
+            
+            // 檢查第三次領藥是否超過處方有效期
+            if (thirdRefillDate > validityEndDate) {
+              isThirdRefillValid = false;
+            }
+          }
+          
+          // 儲存結果
+          setResults({
+            firstVisitDate: firstDate,
+            earliestSecondRefill: earliestSecondRefill,
+            standardSecondRefill: standardSecondRefill,
+            actualSecondRefill: actualSecondRefillDate ? new Date(actualSecondRefillDate) : null,
+            earliestThirdRefill: earliestThirdRefill,
+            thirdRefillDate: thirdRefillDate,
+            isThirdRefillValid: isThirdRefillValid,
+            validityEndDate: validityEndDate
+          });
+          
+          // 隱藏計算動畫
+          setIsCalculating(false);
+          
+          // 滾動到結果部分
+          const resultsElement = document.getElementById('results');
+          if (resultsElement) {
+            resultsElement.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 200); // 使用短暫的延遲來模擬計算
       };
       
       return (
@@ -192,86 +290,166 @@
           <h1>慢性處方箋領藥時間計算器</h1>
           
           <div className="form-section">
-            <div className="form-group">
-              <label>看診日期 (第一次領藥日期)</label>
-              <div className="date-selects">
-                <select 
-                  value={firstVisitYear}
-                  onChange={(e) => setFirstVisitYear(e.target.value)}
-                >
-                  <option value="">選擇年份</option>
-                  {years.map(year => (
-                    <option key={year} value={year}>{year}年</option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={firstVisitMonth}
-                  onChange={(e) => {
-                    const newMonth = e.target.value;
-                    setFirstVisitMonth(newMonth);
-                    
-                    // 當選擇的月份變化時，檢查日期是否有效
-                    if (firstVisitDay) {
-                      const daysInNewMonth = getDaysInMonth(parseInt(firstVisitYear), parseInt(newMonth));
-                      if (parseInt(firstVisitDay) > daysInNewMonth) {
-                        setFirstVisitDay(daysInNewMonth.toString());
+            <div className="grid-form">
+              <div className="form-group">
+                <label>看診日期 (第一次領藥日期) <span style={{color: 'red'}}>*</span></label>
+                <div className="date-selects">
+                  <select 
+                    value={firstVisitYear}
+                    onChange={(e) => setFirstVisitYear(e.target.value)}
+                  >
+                    <option value="">選擇年份</option>
+                    {years.map(year => (
+                      <option key={year} value={year}>{year}年</option>
+                    ))}
+                  </select>
+                  
+                  <select 
+                    value={firstVisitMonth}
+                    onChange={(e) => {
+                      const newMonth = e.target.value;
+                      setFirstVisitMonth(newMonth);
+                      
+                      // 當選擇的月份變化時，檢查日期是否有效
+                      if (firstVisitDay) {
+                        const daysInNewMonth = getDaysInMonth(parseInt(firstVisitYear), parseInt(newMonth));
+                        if (parseInt(firstVisitDay) > daysInNewMonth) {
+                          setFirstVisitDay(daysInNewMonth.toString());
+                        }
                       }
-                    }
-                  }}
-                >
-                  <option value="">選擇月份</option>
-                  {months.map(month => (
-                    <option key={month} value={month.toString().padStart(2, '0')}>{month}月</option>
-                  ))}
-                </select>
-                
+                    }}
+                  >
+                    <option value="">選擇月份</option>
+                    {months.map(month => (
+                      <option key={month} value={month.toString().padStart(2, '0')}>{month}月</option>
+                    ))}
+                  </select>
+                  
+                  <select 
+                    value={firstVisitDay}
+                    onChange={(e) => setFirstVisitDay(e.target.value)}
+                  >
+                    <option value="">選擇日期</option>
+                    {firstVisitDays.map(day => (
+                      <option key={day} value={day.toString().padStart(2, '0')}>{day}日</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label>慢性處方箋天數 <span style={{color: 'red'}}>*</span></label>
                 <select 
-                  value={firstVisitDay}
-                  onChange={(e) => setFirstVisitDay(e.target.value)}
+                  value={prescriptionDays}
+                  onChange={(e) => setPrescriptionDays(e.target.value)}
                 >
-                  <option value="">選擇日期</option>
-                  {firstVisitDays.map(day => (
-                    <option key={day} value={day.toString().padStart(2, '0')}>{day}日</option>
+                  {Array.from({ length: 10 }, (_, i) => i + 21).map(day => (
+                    <option key={day} value={day.toString()}>{day}天</option>
                   ))}
                 </select>
               </div>
+              
+              <div className="form-group">
+                <label>本慢箋可領藥次數 <span style={{color: 'red'}}>*</span></label>
+                <select 
+                  value={refillTimes}
+                  onChange={(e) => setRefillTimes(e.target.value)}
+                >
+                  <option value="2">2次</option>
+                  <option value="3">3次</option>
+                  {parseInt(prescriptionDays) <= 22 && <option value="4">4次</option>}
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <label>實際第二次領藥日期 (選填，若已過第二次領藥)</label>
+                <div className="date-selects">
+                  <select 
+                    value={actualSecondYear}
+                    onChange={(e) => setActualSecondYear(e.target.value)}
+                  >
+                    <option value="">選擇年份</option>
+                    {years.map(year => (
+                      <option key={year} value={year}>{year}年</option>
+                    ))}
+                  </select>
+                  
+                  <select 
+                    value={actualSecondMonth}
+                    onChange={(e) => {
+                      const newMonth = e.target.value;
+                      setActualSecondMonth(newMonth);
+                      
+                      // 當選擇的月份變化時，檢查日期是否有效
+                      if (actualSecondDay) {
+                        const daysInNewMonth = getDaysInMonth(parseInt(actualSecondYear), parseInt(newMonth));
+                        if (parseInt(actualSecondDay) > daysInNewMonth) {
+                          setActualSecondDay(daysInNewMonth.toString());
+                        }
+                      }
+                    }}
+                    disabled={!actualSecondYear}
+                  >
+                    <option value="">選擇月份</option>
+                    {months.map(month => (
+                      <option key={month} value={month.toString().padStart(2, '0')}>{month}月</option>
+                    ))}
+                  </select>
+                  
+                  <select 
+                    value={actualSecondDay}
+                    onChange={(e) => setActualSecondDay(e.target.value)}
+                    disabled={!actualSecondMonth}
+                  >
+                    <option value="">選擇日期</option>
+                    {actualSecondDays.map(day => (
+                      <option key={day} value={day.toString().padStart(2, '0')}>{day}日</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
             
-            <div className="form-group">
-              <label>慢性處方箋天數</label>
-              <select 
-                value={prescriptionDays}
-                onChange={(e) => setPrescriptionDays(e.target.value)}
-              >
-                {Array.from({ length: 10 }, (_, i) => i + 21).map(day => (
-                  <option key={day} value={day.toString()}>{day}天</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>本慢箋可領藥次數</label>
-              <select 
-                value={refillTimes}
-                onChange={(e) => setRefillTimes(e.target.value)}
-              >
-                <option value="2">2次</option>
-                <option value="3">3次</option>
-                {parseInt(prescriptionDays) <= 22 && <option value="4">4次</option>}
-              </select>
-            </div>
-            
-            <button onClick={calculateDates}>計算領藥與回診時間</button>
+            <button 
+              onClick={calculateDates}
+              disabled={isCalculating}
+              style={{
+                opacity: isCalculating ? 0.7 : 1,
+                cursor: isCalculating ? 'wait' : 'pointer'
+              }}
+            >
+              {isCalculating ? '計算中...' : '計算領藥與回診時間'}
+            </button>
           </div>
           
           {results && (
-            <div className="results">
+            <div id="results" className="results">
               <h2>計算結果</h2>
+              
+              <h3>處方資訊</h3>
               <p><strong>首次領藥日期：</strong> {formatDateForDisplay(results.firstVisitDate)}</p>
               <p><strong>處方有效期限：</strong> {formatDateForDisplay(results.validityEndDate)} (首次領藥後90天)</p>
-              <p><strong>最早可第二次領藥日期：</strong> {formatDateForDisplay(results.earliestSecondRefill)} (藥品剩餘&lt;10天時)</p>
-              <p><strong>標準第二次領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} (藥品用完時)</p>
+              
+              <h3>第二次領藥</h3>
+              <p><strong>最早可領藥日期：</strong> <span className="highlight">{formatDateForDisplay(results.earliestSecondRefill)}</span> (藥品剩餘&lt;10天時)</p>
+              <p><strong>標準領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} (藥品用完時)</p>
+              {results.actualSecondRefill && (
+                <p><strong>實際領藥日期：</strong> {formatDateForDisplay(results.actualSecondRefill)}</p>
+              )}
+              
+              {parseInt(refillTimes) >= 3 && (
+                <>
+                  <h3>第三次領藥</h3>
+                  {results.isThirdRefillValid ? (
+                    <>
+                      <p><strong>最早可領藥日期：</strong> <span className="highlight">{formatDateForDisplay(results.earliestThirdRefill)}</span> (藥品剩餘&lt;10天時)</p>
+                      <p><strong>標準領藥日期：</strong> {formatDateForDisplay(results.thirdRefillDate)} (藥品用完時)</p>
+                    </>
+                  ) : (
+                    <p style={{color: 'red'}}>此次領藥時間已超過處方箋有效期限（{formatDateForDisplay(results.validityEndDate)}），無法領藥。請重新回診開立處方。</p>
+                  )}
+                </>
+              )}
             </div>
           )}
           
@@ -285,6 +463,17 @@
               <li>最早可於藥品剩餘&lt;10天時提前領藥</li>
               <li>如果延遲領藥，後續領藥時間會順延，但必須在90天有效期內完成所有領藥</li>
             </ul>
+            
+            <p><strong>使用方法：</strong></p>
+            <ol>
+              <li>輸入首次看診/領藥日期</li>
+              <li>選擇慢性處方箋天數 (21~30天)</li>
+              <li>選擇可領藥次數 (2/3/4次)</li>
+              <li>若已過第二次領藥，可選填實際第二次領藥日期，系統會據此調整後續日期</li>
+              <li>點擊計算按鈕即可獲得領藥和回診時間</li>
+            </ol>
+            
+            <p><strong>注意：</strong> 此計算器僅供參考，實際領藥時間可能受醫院或藥局營業時間、假日等因素影響。請依照醫囑按時服藥並適時回診。</p>
           </div>
         </div>
       );
