@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>慢性處方箋領藥時間計算器</title>
   
-  <!-- React和相關依賴 -->
-  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-  
   <style>
     body {
       font-family: 'Microsoft JhengHei', Arial, sans-serif;
@@ -86,416 +81,411 @@
       padding-top: 10px;
       border-top: 1px dotted #ccc;
     }
+    
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <div id="root"></div>
-  
-  <script type="text/babel">
-    function App() {
-      // 基本状态
-      const [firstVisitDate, setFirstVisitDate] = React.useState('');
-      const [firstVisitYear, setFirstVisitYear] = React.useState('');
-      const [firstVisitMonth, setFirstVisitMonth] = React.useState('');
-      const [firstVisitDay, setFirstVisitDay] = React.useState('');
-      const [actualSecondRefillDate, setActualSecondRefillDate] = React.useState('');
-      const [actualSecondYear, setActualSecondYear] = React.useState('');
-      const [actualSecondMonth, setActualSecondMonth] = React.useState('');
-      const [actualSecondDay, setActualSecondDay] = React.useState('');
-      const [prescriptionDays, setPrescriptionDays] = React.useState('28');
-      const [refillTimes, setRefillTimes] = React.useState('3');
-      const [results, setResults] = React.useState(null);
+  <div class="container">
+    <h1>慢性處方箋領藥時間計算器</h1>
+    
+    <div class="form-section">
+      <div class="form-group">
+        <label>看診日期 (第一次領藥日期)</label>
+        <div class="date-selects">
+          <select id="firstVisitYear">
+            <option value="">選擇年份</option>
+            <!-- 年份選項將由JavaScript動態生成 -->
+          </select>
+          
+          <select id="firstVisitMonth">
+            <option value="">選擇月份</option>
+            <!-- 月份選項將由JavaScript動態生成 -->
+          </select>
+          
+          <select id="firstVisitDay">
+            <option value="">選擇日期</option>
+            <!-- 日期選項將由JavaScript動態生成 -->
+          </select>
+        </div>
+      </div>
       
-      // 建立年份選項
-      const currentYear = new Date().getFullYear();
-      const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+      <div class="form-group">
+        <label>慢性處方箋天數</label>
+        <select id="prescriptionDays">
+          <!-- 處方天數選項將由JavaScript動態生成 -->
+        </select>
+      </div>
       
-      // 建立月份選項
-      const months = Array.from({ length: 12 }, (_, i) => i + 1);
+      <div class="form-group">
+        <label>本慢箋可領藥次數</label>
+        <select id="refillTimes">
+          <option value="2">2次</option>
+          <option value="3" selected>3次</option>
+          <option value="4">4次</option>
+        </select>
+      </div>
       
-      // 建立日期選項
-      const getDaysInMonth = (year, month) => {
-        return new Date(year, month, 0).getDate();
-      };
+      <div class="form-group">
+        <label>實際第二次領藥日期 (選填，若已過第二次領藥)</label>
+        <div class="date-selects">
+          <select id="actualSecondYear">
+            <option value="">選擇年份</option>
+            <!-- 年份選項將由JavaScript動態生成 -->
+          </select>
+          
+          <select id="actualSecondMonth" disabled>
+            <option value="">選擇月份</option>
+            <!-- 月份選項將由JavaScript動態生成 -->
+          </select>
+          
+          <select id="actualSecondDay" disabled>
+            <option value="">選擇日期</option>
+            <!-- 日期選項將由JavaScript動態生成 -->
+          </select>
+        </div>
+      </div>
+      
+      <button id="calculateButton">計算領藥與回診時間</button>
+    </div>
+    
+    <div id="resultsContainer" class="results hidden">
+      <h2>計算結果</h2>
+      <p><strong>首次領藥日期：</strong> <span id="firstVisitDateResult"></span></p>
+      <p><strong>處方有效期限：</strong> <span id="validityEndDateResult"></span> (首次領藥後90天)</p>
+      
+      <h3>第二次領藥資訊</h3>
+      <p><strong>最早可第二次領藥日期：</strong> <span id="earliestSecondRefillResult"></span> (藥品剩餘&lt;10天時)</p>
+      <p><strong>標準第二次領藥日期：</strong> <span id="standardSecondRefillResult"></span> (藥品用完時)</p>
+      <p id="actualSecondRefillContainer" class="hidden"><strong>實際第二次領藥日期：</strong> <span id="actualSecondRefillResult"></span></p>
+      
+      <div id="thirdRefillInfo" class="hidden">
+        <h3>第三次領藥資訊</h3>
+        <p><strong>最早可第三次領藥日期：</strong> <span id="earliestThirdRefillResult"></span> (藥品剩餘&lt;10天時)</p>
+        <p><strong>標準第三次領藥日期：</strong> <span id="standardThirdRefillResult"></span> (藥品用完時)</p>
+        <p id="adjustedThirdRefillContainer" class="hidden"><strong>調整後的第三次領藥日期：</strong> <span id="adjustedThirdRefillResult"></span> (根據實際第二次領藥推算)</p>
+      </div>
+      
+      <div id="fourthRefillInfo" class="hidden">
+        <h3>第四次領藥資訊</h3>
+        <p><strong>最早可第四次領藥日期：</strong> <span id="earliestFourthRefillResult"></span> (藥品剩餘&lt;10天時)</p>
+        <p><strong>標準第四次領藥日期：</strong> <span id="standardFourthRefillResult"></span> (藥品用完時)</p>
+        <p id="adjustedFourthRefillContainer" class="hidden"><strong>調整後的第四次領藥日期：</strong> <span id="adjustedFourthRefillResult"></span> (根據實際第二次領藥推算)</p>
+      </div>
+      
+      <h3>回診資訊</h3>
+      <p><strong>預計下次回診日期：</strong> <span id="nextVisitDateResult"></span> (正常用藥情況)</p>
+      <p id="adjustedNextVisitDateContainer" class="hidden"><strong>調整後的回診日期：</strong> <span id="adjustedNextVisitDateResult"></span> (根據實際第二次領藥推算)</p>
+    </div>
+    
+    <div class="info-section">
+      <h3>說明</h3>
+      <p>根據台灣健保制度，慢性病連續處方箋規定：</p>
+      <ul>
+        <li>慢性處方箋有效期限為首次領藥日起90天內</li>
+        <li>一般處方天數為21~30天</li>
+        <li>可領藥次數通常為2至4次</li>
+        <li>最早可於藥品剩餘&lt;10天時提前領藥</li>
+        <li>如果延遲領藥，後續領藥時間會順延，但必須在90天有效期內完成所有領藥</li>
+        <li>慢箋使用完畢後，需回診向醫師取得新的處方箋</li>
+      </ul>
+    </div>
+  </div>
 
-      // 根據選擇的年月計算可用的日期
-      const getAvailableDays = (year, month) => {
-        if (!year || !month) return Array.from({ length: 31 }, (_, i) => i + 1);
-        const daysInMonth = getDaysInMonth(parseInt(year), parseInt(month));
-        return Array.from({ length: daysInMonth }, (_, i) => i + 1);
-      };
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 獲取DOM元素
+      const firstVisitYearSelect = document.getElementById('firstVisitYear');
+      const firstVisitMonthSelect = document.getElementById('firstVisitMonth');
+      const firstVisitDaySelect = document.getElementById('firstVisitDay');
+      const prescriptionDaysSelect = document.getElementById('prescriptionDays');
+      const refillTimesSelect = document.getElementById('refillTimes');
+      const actualSecondYearSelect = document.getElementById('actualSecondYear');
+      const actualSecondMonthSelect = document.getElementById('actualSecondMonth');
+      const actualSecondDaySelect = document.getElementById('actualSecondDay');
+      const calculateButton = document.getElementById('calculateButton');
+      const resultsContainer = document.getElementById('resultsContainer');
       
-      const firstVisitDays = getAvailableDays(firstVisitYear, firstVisitMonth);
-      const actualSecondDays = getAvailableDays(actualSecondYear, actualSecondMonth);
-      
-      // 設置今天的日期
-      React.useEffect(() => {
-        const date = new Date();
+      // 初始化年份選項
+      const currentYear = new Date().getFullYear();
+      for (let i = currentYear - 5; i <= currentYear + 4; i++) {
+        const yearOption = document.createElement('option');
+        yearOption.value = i;
+        yearOption.textContent = i + '年';
+        firstVisitYearSelect.appendChild(yearOption);
         
-        // 設置初始日期為今天
-        const currentYear = date.getFullYear().toString();
-        const currentMonth = (date.getMonth() + 1).toString().padStart(2, '0');
-        const currentDay = date.getDate().toString().padStart(2, '0');
-        
-        setFirstVisitYear(currentYear);
-        setFirstVisitMonth(currentMonth);
-        setFirstVisitDay(currentDay);
-        updateFirstVisitDate(currentYear, currentMonth, currentDay);
-      }, []);
+        const yearOption2 = document.createElement('option');
+        yearOption2.value = i;
+        yearOption2.textContent = i + '年';
+        actualSecondYearSelect.appendChild(yearOption2);
+      }
       
-      // 當年月日選擇變化時更新日期字串
-      const updateFirstVisitDate = (year, month, day) => {
-        if (year && month && day) {
-          const formattedMonth = month.padStart(2, '0');
-          const formattedDay = day.padStart(2, '0');
-          setFirstVisitDate(`${year}-${formattedMonth}-${formattedDay}`);
+      // 初始化月份選項
+      for (let i = 1; i <= 12; i++) {
+        const monthOption = document.createElement('option');
+        const monthValue = i.toString().padStart(2, '0');
+        monthOption.value = monthValue;
+        monthOption.textContent = i + '月';
+        firstVisitMonthSelect.appendChild(monthOption);
+        
+        const monthOption2 = document.createElement('option');
+        monthOption2.value = monthValue;
+        monthOption2.textContent = i + '月';
+        actualSecondMonthSelect.appendChild(monthOption2);
+      }
+      
+      // 初始化處方天數選項
+      for (let i = 21; i <= 30; i++) {
+        const dayOption = document.createElement('option');
+        dayOption.value = i;
+        dayOption.textContent = i + '天';
+        if (i === 28) {
+          dayOption.selected = true;
         }
-      };
+        prescriptionDaysSelect.appendChild(dayOption);
+      }
       
-      const updateActualSecondDate = (year, month, day) => {
-        if (year && month && day) {
-          const formattedMonth = month.padStart(2, '0');
-          const formattedDay = day.padStart(2, '0');
-          setActualSecondRefillDate(`${year}-${formattedMonth}-${formattedDay}`);
+      // 設置今天的日期為預設值
+      const today = new Date();
+      firstVisitYearSelect.value = today.getFullYear();
+      firstVisitMonthSelect.value = (today.getMonth() + 1).toString().padStart(2, '0');
+      updateDays(firstVisitYearSelect, firstVisitMonthSelect, firstVisitDaySelect);
+      firstVisitDaySelect.value = today.getDate().toString().padStart(2, '0');
+      
+      // 年月變更時更新日期選項
+      firstVisitYearSelect.addEventListener('change', function() {
+        updateDays(firstVisitYearSelect, firstVisitMonthSelect, firstVisitDaySelect);
+      });
+      
+      firstVisitMonthSelect.addEventListener('change', function() {
+        updateDays(firstVisitYearSelect, firstVisitMonthSelect, firstVisitDaySelect);
+      });
+      
+      actualSecondYearSelect.addEventListener('change', function() {
+        actualSecondMonthSelect.disabled = !actualSecondYearSelect.value;
+        updateDays(actualSecondYearSelect, actualSecondMonthSelect, actualSecondDaySelect);
+      });
+      
+      actualSecondMonthSelect.addEventListener('change', function() {
+        actualSecondDaySelect.disabled = !actualSecondMonthSelect.value;
+        updateDays(actualSecondYearSelect, actualSecondMonthSelect, actualSecondDaySelect);
+      });
+      
+      // 處方天數變更時，確保有效的領藥次數
+      prescriptionDaysSelect.addEventListener('change', function() {
+        if (parseInt(prescriptionDaysSelect.value) > 22 && refillTimesSelect.value === '4') {
+          refillTimesSelect.value = '3';
+        }
+        
+        // 根據處方天數更新領藥次數選項
+        const option4 = refillTimesSelect.querySelector('option[value="4"]');
+        if (parseInt(prescriptionDaysSelect.value) <= 22) {
+          option4.disabled = false;
         } else {
-          setActualSecondRefillDate('');
+          option4.disabled = true;
         }
-      };
+      });
       
-      // 當年月日選擇變化時更新日期
-      React.useEffect(() => {
-        updateFirstVisitDate(firstVisitYear, firstVisitMonth, firstVisitDay);
-      }, [firstVisitYear, firstVisitMonth, firstVisitDay]);
+      // 計算按鈕點擊事件
+      calculateButton.addEventListener('click', calculateDates);
       
-      React.useEffect(() => {
-        updateActualSecondDate(actualSecondYear, actualSecondMonth, actualSecondDay);
-      }, [actualSecondYear, actualSecondMonth, actualSecondDay]);
-      
-      // 處理處方天數變更，確保有效的領藥次數
-      React.useEffect(() => {
-        // 如果天數大於22天，且選擇了4次，則重置為3次
-        if (parseInt(prescriptionDays) > 22 && refillTimes === '4') {
-          setRefillTimes('3');
+      // 更新日期選項
+      function updateDays(yearSelect, monthSelect, daySelect) {
+        const year = yearSelect.value;
+        const month = monthSelect.value;
+        
+        // 清空現有選項（保留第一個）
+        while (daySelect.options.length > 1) {
+          daySelect.remove(1);
         }
-      }, [prescriptionDays, refillTimes]);
+        
+        if (!year || !month) return;
+        
+        const daysInMonth = new Date(year, month, 0).getDate();
+        
+        // 添加新選項
+        for (let i = 1; i <= daysInMonth; i++) {
+          const dayOption = document.createElement('option');
+          const dayValue = i.toString().padStart(2, '0');
+          dayOption.value = dayValue;
+          dayOption.textContent = i + '日';
+          daySelect.appendChild(dayOption);
+        }
+      }
       
       // 格式化日期顯示
-      const formatDateForDisplay = (date) => {
-        if (!date) return ""; // 防止null或undefined的情況
-        const d = new Date(date);
-        return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
-      };
+      function formatDateForDisplay(date) {
+        if (!date) return '';
+        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+      }
       
-      // 計算領藥日期和回診日期
-      const calculateDates = () => {
-        if (!firstVisitDate) {
-          alert('請填寫看診日期');
-          return;
-        }
-        
+      // 計算日期
+      function calculateDates() {
         try {
-          const days = parseInt(prescriptionDays);
-          const times = parseInt(refillTimes);
+          // 檢查必填項
+          if (!firstVisitYearSelect.value || !firstVisitMonthSelect.value || !firstVisitDaySelect.value) {
+            alert('請填寫看診日期');
+            return;
+          }
           
-          // 計算標準領藥日期
-          const firstDate = new Date(firstVisitDate);
+          // 獲取表單數據
+          const firstVisitDate = new Date(
+            firstVisitYearSelect.value, 
+            parseInt(firstVisitMonthSelect.value) - 1, 
+            firstVisitDaySelect.value
+          );
           
-          // 計算最早第二次領藥日期（剩餘藥品不足10天時）
-          const earliestSecondRefill = new Date(firstDate);
-          earliestSecondRefill.setDate(firstDate.getDate() + days - 10);
+          const days = parseInt(prescriptionDaysSelect.value);
+          const times = parseInt(refillTimesSelect.value);
           
-          // 計算標準第二次領藥日期
-          const standardSecondRefill = new Date(firstDate);
-          standardSecondRefill.setDate(firstDate.getDate() + days);
+          // 計算各領藥日期
+          // 第二次領藥
+          const earliestSecondRefill = new Date(firstVisitDate);
+          earliestSecondRefill.setDate(firstVisitDate.getDate() + days - 10);
           
-          // 計算90天處方有效期結束日期
-          const validityEndDate = new Date(firstDate);
-          validityEndDate.setDate(firstDate.getDate() + 90);
+          const standardSecondRefill = new Date(firstVisitDate);
+          standardSecondRefill.setDate(firstVisitDate.getDate() + days);
           
-          // 計算下次回診日期（慢箋使用完畢後）
-          const nextVisitDate = new Date(firstDate);
-          nextVisitDate.setDate(firstDate.getDate() + days * times);
+          // 處方有效期限
+          const validityEndDate = new Date(firstVisitDate);
+          validityEndDate.setDate(firstVisitDate.getDate() + 90);
           
-          // 初始化第三、四次領藥的日期
+          // 下次回診日期
+          const nextVisitDate = new Date(firstVisitDate);
+          nextVisitDate.setDate(firstVisitDate.getDate() + days * times);
+          
+          // 初始化第三、四次領藥日期
           let standardThirdRefill = null;
           let earliestThirdRefill = null;
           let standardFourthRefill = null;
           let earliestFourthRefill = null;
           
-          // 如果領藥次數 >= 3，計算第三次領藥時間
+          // 如果領藥次數 >= 3，計算第三次
           if (times >= 3) {
-            standardThirdRefill = new Date(firstDate);
-            standardThirdRefill.setDate(firstDate.getDate() + days * 2);
+            standardThirdRefill = new Date(firstVisitDate);
+            standardThirdRefill.setDate(firstVisitDate.getDate() + days * 2);
             
-            earliestThirdRefill = new Date(firstDate);
-            earliestThirdRefill.setDate(firstDate.getDate() + days * 2 - 10);
+            earliestThirdRefill = new Date(firstVisitDate);
+            earliestThirdRefill.setDate(firstVisitDate.getDate() + days * 2 - 10);
           }
           
-          // 如果領藥次數 = 4，計算第四次領藥時間
+          // 如果領藥次數 = 4，計算第四次
           if (times >= 4) {
-            standardFourthRefill = new Date(firstDate);
-            standardFourthRefill.setDate(firstDate.getDate() + days * 3);
+            standardFourthRefill = new Date(firstVisitDate);
+            standardFourthRefill.setDate(firstVisitDate.getDate() + days * 3);
             
-            earliestFourthRefill = new Date(firstDate);
-            earliestFourthRefill.setDate(firstDate.getDate() + days * 3 - 10);
+            earliestFourthRefill = new Date(firstVisitDate);
+            earliestFourthRefill.setDate(firstVisitDate.getDate() + days * 3 - 10);
           }
           
-          // 初始化根據實際第二次領藥調整的日期
+          // 判斷是否有實際第二次領藥日期
+          let actualSecondRefill = null;
           let adjustedThirdRefill = null;
           let adjustedFourthRefill = null;
           let adjustedNextVisitDate = null;
           
-          // 如果有實際第二次領藥日期，計算調整後的日期
-          if (actualSecondRefillDate) {
-            const actualSecondDate = new Date(actualSecondRefillDate);
+          if (actualSecondYearSelect.value && actualSecondMonthSelect.value && actualSecondDaySelect.value) {
+            actualSecondRefill = new Date(
+              actualSecondYearSelect.value,
+              parseInt(actualSecondMonthSelect.value) - 1,
+              actualSecondDaySelect.value
+            );
+            
             // 計算第一次與第二次之間的實際間隔天數
-            const daysBetweenFirstAndSecond = Math.floor((actualSecondDate - firstDate) / (1000 * 60 * 60 * 24));
+            const daysBetweenFirstAndSecond = Math.floor((actualSecondRefill - firstVisitDate) / (1000 * 60 * 60 * 24));
             
             // 計算調整後的第三次領藥日期（如果適用）
             if (times >= 3) {
-              adjustedThirdRefill = new Date(actualSecondDate);
-              adjustedThirdRefill.setDate(actualSecondDate.getDate() + daysBetweenFirstAndSecond);
+              adjustedThirdRefill = new Date(actualSecondRefill);
+              adjustedThirdRefill.setDate(actualSecondRefill.getDate() + daysBetweenFirstAndSecond);
             }
             
             // 計算調整後的第四次領藥日期（如果適用）
             if (times >= 4) {
-              adjustedFourthRefill = new Date(actualSecondDate);
-              adjustedFourthRefill.setDate(actualSecondDate.getDate() + daysBetweenFirstAndSecond * 2);
+              adjustedFourthRefill = new Date(actualSecondRefill);
+              adjustedFourthRefill.setDate(actualSecondRefill.getDate() + daysBetweenFirstAndSecond * 2);
             }
             
             // 計算調整後的回診日期
-            adjustedNextVisitDate = new Date(actualSecondDate);
-            adjustedNextVisitDate.setDate(actualSecondDate.getDate() + daysBetweenFirstAndSecond * (times - 1));
+            adjustedNextVisitDate = new Date(actualSecondRefill);
+            adjustedNextVisitDate.setDate(actualSecondRefill.getDate() + daysBetweenFirstAndSecond * (times - 1));
           }
           
-          // 儲存結果
-          setResults({
-            firstVisitDate: firstDate,
-            earliestSecondRefill: earliestSecondRefill,
-            standardSecondRefill: standardSecondRefill,
-            actualSecondRefill: actualSecondRefillDate ? new Date(actualSecondRefillDate) : null,
-            standardThirdRefill,
-            earliestThirdRefill,
-            adjustedThirdRefill,
-            standardFourthRefill,
-            earliestFourthRefill,
-            adjustedFourthRefill,
-            validityEndDate,
-            nextVisitDate,
-            adjustedNextVisitDate,
-            refillTimes: times // 保存領藥次數，便於在結果中顯示
-          });
+          // 顯示結果
+          document.getElementById('firstVisitDateResult').textContent = formatDateForDisplay(firstVisitDate);
+          document.getElementById('validityEndDateResult').textContent = formatDateForDisplay(validityEndDate);
+          document.getElementById('earliestSecondRefillResult').textContent = formatDateForDisplay(earliestSecondRefill);
+          document.getElementById('standardSecondRefillResult').textContent = formatDateForDisplay(standardSecondRefill);
+          document.getElementById('nextVisitDateResult').textContent = formatDateForDisplay(nextVisitDate);
+          
+          // 處理可選顯示項
+          // 實際第二次領藥日期
+          const actualSecondRefillContainer = document.getElementById('actualSecondRefillContainer');
+          if (actualSecondRefill) {
+            document.getElementById('actualSecondRefillResult').textContent = formatDateForDisplay(actualSecondRefill);
+            actualSecondRefillContainer.classList.remove('hidden');
+          } else {
+            actualSecondRefillContainer.classList.add('hidden');
+          }
+          
+          // 調整後的回診日期
+          const adjustedNextVisitDateContainer = document.getElementById('adjustedNextVisitDateContainer');
+          if (adjustedNextVisitDate) {
+            document.getElementById('adjustedNextVisitDateResult').textContent = formatDateForDisplay(adjustedNextVisitDate);
+            adjustedNextVisitDateContainer.classList.remove('hidden');
+          } else {
+            adjustedNextVisitDateContainer.classList.add('hidden');
+          }
+          
+          // 第三次領藥資訊
+          const thirdRefillInfo = document.getElementById('thirdRefillInfo');
+          if (times >= 3) {
+            document.getElementById('earliestThirdRefillResult').textContent = formatDateForDisplay(earliestThirdRefill);
+            document.getElementById('standardThirdRefillResult').textContent = formatDateForDisplay(standardThirdRefill);
+            thirdRefillInfo.classList.remove('hidden');
+            
+            // 調整後的第三次領藥日期
+            const adjustedThirdRefillContainer = document.getElementById('adjustedThirdRefillContainer');
+            if (adjustedThirdRefill) {
+              document.getElementById('adjustedThirdRefillResult').textContent = formatDateForDisplay(adjustedThirdRefill);
+              adjustedThirdRefillContainer.classList.remove('hidden');
+            } else {
+              adjustedThirdRefillContainer.classList.add('hidden');
+            }
+          } else {
+            thirdRefillInfo.classList.add('hidden');
+          }
+          
+          // 第四次領藥資訊
+          const fourthRefillInfo = document.getElementById('fourthRefillInfo');
+          if (times >= 4) {
+            document.getElementById('earliestFourthRefillResult').textContent = formatDateForDisplay(earliestFourthRefill);
+            document.getElementById('standardFourthRefillResult').textContent = formatDateForDisplay(standardFourthRefill);
+            fourthRefillInfo.classList.remove('hidden');
+            
+            // 調整後的第四次領藥日期
+            const adjustedFourthRefillContainer = document.getElementById('adjustedFourthRefillContainer');
+            if (adjustedFourthRefill) {
+              document.getElementById('adjustedFourthRefillResult').textContent = formatDateForDisplay(adjustedFourthRefill);
+              adjustedFourthRefillContainer.classList.remove('hidden');
+            } else {
+              adjustedFourthRefillContainer.classList.add('hidden');
+            }
+          } else {
+            fourthRefillInfo.classList.add('hidden');
+          }
+          
+          // 顯示結果區塊
+          resultsContainer.classList.remove('hidden');
+          
         } catch (error) {
-          console.error("計算日期時發生錯誤：", error);
-          alert("計算日期時發生錯誤，請檢查輸入內容。");
+          console.error('計算日期時發生錯誤：', error);
+          alert('計算日期時發生錯誤，請檢查輸入內容。');
         }
-      };
-      
-      // 渲染結果區塊
-      const renderResults = () => {
-        if (!results) return null;
-        
-        return (
-          <div className="results">
-            <h2>計算結果</h2>
-            <p><strong>首次領藥日期：</strong> {formatDateForDisplay(results.firstVisitDate)}</p>
-            <p><strong>處方有效期限：</strong> {formatDateForDisplay(results.validityEndDate)} (首次領藥後90天)</p>
-            
-            <h3>第二次領藥資訊</h3>
-            <p><strong>最早可第二次領藥日期：</strong> {formatDateForDisplay(results.earliestSecondRefill)} (藥品剩餘&lt;10天時)</p>
-            <p><strong>標準第二次領藥日期：</strong> {formatDateForDisplay(results.standardSecondRefill)} (藥品用完時)</p>
-            {results.actualSecondRefill && (
-              <p><strong>實際第二次領藥日期：</strong> {formatDateForDisplay(results.actualSecondRefill)}</p>
-            )}
-            
-            {results.refillTimes >= 3 && (
-              <>
-                <h3>第三次領藥資訊</h3>
-                <p><strong>最早可第三次領藥日期：</strong> {formatDateForDisplay(results.earliestThirdRefill)} (藥品剩餘&lt;10天時)</p>
-                <p><strong>標準第三次領藥日期：</strong> {formatDateForDisplay(results.standardThirdRefill)} (藥品用完時)</p>
-                {results.adjustedThirdRefill && (
-                  <p><strong>調整後的第三次領藥日期：</strong> {formatDateForDisplay(results.adjustedThirdRefill)} (根據實際第二次領藥推算)</p>
-                )}
-              </>
-            )}
-            
-            {results.refillTimes >= 4 && (
-              <>
-                <h3>第四次領藥資訊</h3>
-                <p><strong>最早可第四次領藥日期：</strong> {formatDateForDisplay(results.earliestFourthRefill)} (藥品剩餘&lt;10天時)</p>
-                <p><strong>標準第四次領藥日期：</strong> {formatDateForDisplay(results.standardFourthRefill)} (藥品用完時)</p>
-                {results.adjustedFourthRefill && (
-                  <p><strong>調整後的第四次領藥日期：</strong> {formatDateForDisplay(results.adjustedFourthRefill)} (根據實際第二次領藥推算)</p>
-                )}
-              </>
-            )}
-            
-            <h3>回診資訊</h3>
-            <p><strong>預計下次回診日期：</strong> {formatDateForDisplay(results.nextVisitDate)} (正常用藥情況)</p>
-            {results.adjustedNextVisitDate && (
-              <p><strong>調整後的回診日期：</strong> {formatDateForDisplay(results.adjustedNextVisitDate)} (根據實際第二次領藥推算)</p>
-            )}
-          </div>
-        );
-      };
-      
-      return (
-        <div className="container">
-          <h1>慢性處方箋領藥時間計算器</h1>
-          
-          <div className="form-section">
-            <div className="form-group">
-              <label>看診日期 (第一次領藥日期)</label>
-              <div className="date-selects">
-                <select 
-                  value={firstVisitYear}
-                  onChange={(e) => setFirstVisitYear(e.target.value)}
-                >
-                  <option value="">選擇年份</option>
-                  {years.map(year => (
-                    <option key={year} value={year}>{year}年</option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={firstVisitMonth}
-                  onChange={(e) => {
-                    const newMonth = e.target.value;
-                    setFirstVisitMonth(newMonth);
-                    
-                    // 當選擇的月份變化時，檢查日期是否有效
-                    if (firstVisitDay) {
-                      const daysInNewMonth = getDaysInMonth(parseInt(firstVisitYear), parseInt(newMonth));
-                      if (parseInt(firstVisitDay) > daysInNewMonth) {
-                        setFirstVisitDay(daysInNewMonth.toString());
-                      }
-                    }
-                  }}
-                >
-                  <option value="">選擇月份</option>
-                  {months.map(month => (
-                    <option key={month} value={month.toString().padStart(2, '0')}>{month}月</option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={firstVisitDay}
-                  onChange={(e) => setFirstVisitDay(e.target.value)}
-                >
-                  <option value="">選擇日期</option>
-                  {firstVisitDays.map(day => (
-                    <option key={day} value={day.toString().padStart(2, '0')}>{day}日</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <div className="form-group">
-              <label>慢性處方箋天數</label>
-              <select 
-                value={prescriptionDays}
-                onChange={(e) => setPrescriptionDays(e.target.value)}
-              >
-                {Array.from({ length: 10 }, (_, i) => i + 21).map(day => (
-                  <option key={day} value={day.toString()}>{day}天</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>本慢箋可領藥次數</label>
-              <select 
-                value={refillTimes}
-                onChange={(e) => setRefillTimes(e.target.value)}
-              >
-                <option value="2">2次</option>
-                <option value="3">3次</option>
-                {parseInt(prescriptionDays) <= 22 && <option value="4">4次</option>}
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>實際第二次領藥日期 (選填，若已過第二次領藥)</label>
-              <div className="date-selects">
-                <select 
-                  value={actualSecondYear}
-                  onChange={(e) => setActualSecondYear(e.target.value)}
-                >
-                  <option value="">選擇年份</option>
-                  {years.map(year => (
-                    <option key={year} value={year}>{year}年</option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={actualSecondMonth}
-                  onChange={(e) => {
-                    const newMonth = e.target.value;
-                    setActualSecondMonth(newMonth);
-                    
-                    // 當選擇的月份變化時，檢查日期是否有效
-                    if (actualSecondDay) {
-                      const daysInNewMonth = getDaysInMonth(parseInt(actualSecondYear), parseInt(newMonth));
-                      if (parseInt(actualSecondDay) > daysInNewMonth) {
-                        setActualSecondDay(daysInNewMonth.toString());
-                      }
-                    }
-                  }}
-                  disabled={!actualSecondYear}
-                >
-                  <option value="">選擇月份</option>
-                  {months.map(month => (
-                    <option key={month} value={month.toString().padStart(2, '0')}>{month}月</option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={actualSecondDay}
-                  onChange={(e) => setActualSecondDay(e.target.value)}
-                  disabled={!actualSecondMonth}
-                >
-                  <option value="">選擇日期</option>
-                  {actualSecondDays.map(day => (
-                    <option key={day} value={day.toString().padStart(2, '0')}>{day}日</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            
-            <button onClick={calculateDates}>計算領藥與回診時間</button>
-          </div>
-          
-          {renderResults()}
-          
-          <div className="info-section">
-            <h3>說明</h3>
-            <p>根據台灣健保制度，慢性病連續處方箋規定：</p>
-            <ul>
-              <li>慢性處方箋有效期限為首次領藥日起90天內</li>
-              <li>一般處方天數為21~30天</li>
-              <li>可領藥次數通常為2至4次</li>
-              <li>最早可於藥品剩餘&lt;10天時提前領藥</li>
-              <li>如果延遲領藥，後續領藥時間會順延，但必須在90天有效期內完成所有領藥</li>
-              <li>慢箋使用完畢後，需回診向醫師取得新的處方箋</li>
-            </ul>
-          </div>
-        </div>
-      );
-    }
-
-    // 錯誤處理
-    try {
-      ReactDOM.render(<App />, document.getElementById('root'));
-    } catch (error) {
-      document.getElementById('root').innerHTML = `
-        <div style="color: red; padding: 20px; border: 1px solid red; margin: 20px;">
-          <h2>錯誤</h2>
-          <p>${error.message}</p>
-          <p>如果你在控制台可以看到更多錯誤信息，請提供給我們。</p>
-        </div>
-      `;
-      console.error(error);
-    }
+      }
+    });
   </script>
 </body>
 </html>
