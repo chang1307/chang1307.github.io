@@ -289,7 +289,12 @@
       });
       
       // 計算按鈕點擊事件
-      calculateButton.addEventListener('click', calculateDates);
+      calculateButton.addEventListener('click', function() {
+        // 先隱藏結果區塊，稍後會在計算完成後顯示
+        resultsContainer.classList.add('hidden');
+        // 調用計算函數
+        calculateDates();
+      });
       
       // 更新日期選項
       function updateDays(yearSelect, monthSelect, daySelect) {
@@ -324,6 +329,20 @@
       // 計算日期
       function calculateDates() {
         try {
+          // 每次計算前清空所有結果
+          const resultElements = document.querySelectorAll('[id$="Result"]');
+          resultElements.forEach(element => {
+            element.textContent = '';
+          });
+          
+          // 將所有可能顯示的容器先隱藏
+          document.getElementById('actualSecondRefillContainer').classList.add('hidden');
+          document.getElementById('adjustedNextVisitDateContainer').classList.add('hidden');
+          document.getElementById('thirdRefillInfo').classList.add('hidden');
+          document.getElementById('adjustedThirdRefillContainer').classList.add('hidden');
+          document.getElementById('fourthRefillInfo').classList.add('hidden');
+          document.getElementById('adjustedFourthRefillContainer').classList.add('hidden');
+          
           // 檢查必填項
           if (!firstVisitYearSelect.value || !firstVisitMonthSelect.value || !firstVisitDaySelect.value) {
             alert('請填寫看診日期');
