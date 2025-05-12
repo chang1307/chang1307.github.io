@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>慢性處方箋領藥時間計算器</title>
   
-  <style>
+      <style>
     body {
       font-family: 'Microsoft JhengHei', Arial, sans-serif;
       line-height: 1.6;
@@ -67,6 +67,12 @@
       margin-top: 20px;
       padding-top: 20px;
       border-top: 1px solid #eee;
+      opacity: 0;
+      transition: opacity 0.5s ease-in;
+    }
+    
+    .results.show {
+      opacity: 1;
     }
     
     .info-section {
@@ -247,6 +253,14 @@
         prescriptionDaysSelect.appendChild(dayOption);
       }
       
+      // 根據預設處方天數調整領藥次數選項
+      const option4 = refillTimesSelect.querySelector('option[value="4"]');
+      if (parseInt(prescriptionDaysSelect.value) > 22) {
+        option4.disabled = true;
+      } else {
+        option4.disabled = false;
+      }
+      
       // 設置今天的日期為預設值
       const today = new Date();
       firstVisitYearSelect.value = today.getFullYear();
@@ -290,10 +304,14 @@
       
       // 計算按鈕點擊事件
       calculateButton.addEventListener('click', function() {
-        // 先隱藏結果區塊，稍後會在計算完成後顯示
+        // 先隱藏結果區塊
         resultsContainer.classList.add('hidden');
-        // 調用計算函數
-        calculateDates();
+        resultsContainer.classList.remove('show');
+        
+        // 延遲一點時間後計算，確保清空結果的視覺效果可見
+        setTimeout(() => {
+          calculateDates();
+        }, 100);
       });
       
       // 更新日期選項
@@ -498,6 +516,10 @@
           
           // 顯示結果區塊
           resultsContainer.classList.remove('hidden');
+          // 使用setTimeout確保顯示動畫效果
+          setTimeout(() => {
+            resultsContainer.classList.add('show');
+          }, 10);
           
         } catch (error) {
           console.error('計算日期時發生錯誤：', error);
