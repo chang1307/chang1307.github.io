@@ -219,16 +219,26 @@
       
       <div id="thirdRefillInfo" class="hidden">
         <h3>第三次領藥資訊</h3>
+        <div id="standardThirdRefillContainer">
         <p><strong>最早可第三次領藥日期：</strong> <span id="earliestThirdRefillResult"></span> (藥品剩餘&lt;10天時)</p>
         <p><strong>標準第三次領藥日期：</strong> <span id="standardThirdRefillResult"></span> (藥品用完時)</p>
-        <p id="adjustedThirdRefillContainer" class="hidden"><strong>調整後的第三次領藥日期：</strong> <span id="adjustedThirdRefillResult"></span> (根據實際第二次領藥推算)</p>
+        </div>
+        <p id="adjustedThirdRefillContainer" class="hidden">
+          <strong>調整後最早可第三次領藥日期：</strong> <span id="adjustedEarliestThirdRefillResult"></span> (藥品剩餘&lt;10天時)<br>
+          <strong>調整後的第三次領藥日期：</strong> <span id="adjustedThirdRefillResult"></span> (藥品用完時，根據實際第二次領藥推算)
+        </p>
       </div>
       
       <div id="fourthRefillInfo" class="hidden">
         <h3>第四次領藥資訊</h3>
+        <div id="standardFourthRefillContainer">
         <p><strong>最早可第四次領藥日期：</strong> <span id="earliestFourthRefillResult"></span> (藥品剩餘&lt;10天時)</p>
         <p><strong>標準第四次領藥日期：</strong> <span id="standardFourthRefillResult"></span> (藥品用完時)</p>
-        <p id="adjustedFourthRefillContainer" class="hidden"><strong>調整後的第四次領藥日期：</strong> <span id="adjustedFourthRefillResult"></span> (根據實際第二次領藥推算)</p>
+        </div>
+        <p id="adjustedFourthRefillContainer" class="hidden">
+          <strong>調整後最早可第四次領藥日期：</strong> <span id="adjustedEarliestFourthRefillResult"></span> (藥品剩餘&lt;10天時)<br>
+          <strong>調整後的第四次領藥日期：</strong> <span id="adjustedFourthRefillResult"></span> (藥品用完時，根據實際第二次領藥推算)
+        </p>
       </div>
       
       <h3>回診資訊</h3>
@@ -416,8 +426,10 @@
           document.getElementById('adjustedNextVisitDateContainer').classList.add('hidden');
           document.getElementById('thirdRefillInfo').classList.add('hidden');
           document.getElementById('adjustedThirdRefillContainer').classList.add('hidden');
+          document.getElementById('standardThirdRefillContainer').classList.remove('hidden');
           document.getElementById('fourthRefillInfo').classList.add('hidden');
           document.getElementById('adjustedFourthRefillContainer').classList.add('hidden');
+          document.getElementById('standardFourthRefillContainer').classList.remove('hidden');
           
           // 檢查必填項
           if (!firstVisitYearSelect.value || !firstVisitMonthSelect.value || !firstVisitDaySelect.value) {
@@ -478,7 +490,9 @@
           // 判斷是否有實際第二次領藥日期
           let actualSecondRefill = null;
           let adjustedThirdRefill = null;
+          let adjustedEarliestThirdRefill = null;
           let adjustedFourthRefill = null;
+          let adjustedEarliestFourthRefill = null;
           let adjustedNextVisitDate = null;
           
           if (actualSecondYearSelect.value && actualSecondMonthSelect.value && actualSecondDaySelect.value) {
@@ -488,24 +502,26 @@
               actualSecondDaySelect.value
             );
             
-            // 計算第一次與第二次之間的實際間隔天數
-            const daysBetweenFirstAndSecond = Math.floor((actualSecondRefill - firstVisitDate) / (1000 * 60 * 60 * 24));
-            
             // 計算調整後的第三次領藥日期（如果適用）
+            // 調整後的日期應該基於實際第二次領藥日期，加上原本的處方天數
             if (times >= 3) {
               adjustedThirdRefill = new Date(actualSecondRefill);
-              adjustedThirdRefill.setDate(actualSecondRefill.getDate() + daysBetweenFirstAndSecond);
+              adjustedThirdRefill.setDate(actualSecondRefill.getDate() + days);
+              adjustedEarliestThirdRefill = new Date(actualSecondRefill);
+              adjustedEarliestThirdRefill.setDate(actualSecondRefill.getDate() + days - 10);
             }
             
             // 計算調整後的第四次領藥日期（如果適用）
             if (times >= 4) {
               adjustedFourthRefill = new Date(actualSecondRefill);
-              adjustedFourthRefill.setDate(actualSecondRefill.getDate() + daysBetweenFirstAndSecond * 2);
+              adjustedFourthRefill.setDate(actualSecondRefill.getDate() + days * 2);
+              adjustedEarliestFourthRefill = new Date(actualSecondRefill);
+              adjustedEarliestFourthRefill.setDate(actualSecondRefill.getDate() + days * 2 - 10);
             }
             
             // 計算調整後的回診日期
             adjustedNextVisitDate = new Date(actualSecondRefill);
-            adjustedNextVisitDate.setDate(actualSecondRefill.getDate() + daysBetweenFirstAndSecond * (times - 1));
+            adjustedNextVisitDate.setDate(actualSecondRefill.getDate() + days * (times - 1));
           }
           
           // 顯示結果
@@ -542,12 +558,16 @@
             thirdRefillInfo.classList.remove('hidden');
             
             // 調整後的第三次領藥日期
+            const standardThirdRefillContainer = document.getElementById('standardThirdRefillContainer');
             const adjustedThirdRefillContainer = document.getElementById('adjustedThirdRefillContainer');
             if (adjustedThirdRefill) {
+              document.getElementById('adjustedEarliestThirdRefillResult').textContent = formatDateForDisplay(adjustedEarliestThirdRefill);
               document.getElementById('adjustedThirdRefillResult').textContent = formatDateForDisplay(adjustedThirdRefill);
               adjustedThirdRefillContainer.classList.remove('hidden');
+              standardThirdRefillContainer.classList.add('hidden'); // 隱藏標準日期
             } else {
               adjustedThirdRefillContainer.classList.add('hidden');
+              standardThirdRefillContainer.classList.remove('hidden'); // 顯示標準日期
             }
           } else {
             thirdRefillInfo.classList.add('hidden');
@@ -561,12 +581,16 @@
             fourthRefillInfo.classList.remove('hidden');
             
             // 調整後的第四次領藥日期
+            const standardFourthRefillContainer = document.getElementById('standardFourthRefillContainer');
             const adjustedFourthRefillContainer = document.getElementById('adjustedFourthRefillContainer');
             if (adjustedFourthRefill) {
+              document.getElementById('adjustedEarliestFourthRefillResult').textContent = formatDateForDisplay(adjustedEarliestFourthRefill);
               document.getElementById('adjustedFourthRefillResult').textContent = formatDateForDisplay(adjustedFourthRefill);
               adjustedFourthRefillContainer.classList.remove('hidden');
+              standardFourthRefillContainer.classList.add('hidden'); // 隱藏標準日期
             } else {
               adjustedFourthRefillContainer.classList.add('hidden');
+              standardFourthRefillContainer.classList.remove('hidden'); // 顯示標準日期
             }
           } else {
             fourthRefillInfo.classList.add('hidden');
